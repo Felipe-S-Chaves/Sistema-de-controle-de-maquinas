@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Dashboard - Controle de Maquinas</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link href="/assets/vendor/bootstrap/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/app.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-topbar" id="appTopbar"></header>
+    <div class="app-body">
+      <aside class="app-sidebar" id="appSidebar"></aside>
+      <main class="app-main" id="appMain">
+
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+          <div>
+            <h1 class="h4 mb-1">Dashboard</h1>
+            <p class="text-muted small mb-0" id="periodLabel">Carregando periodo...</p>
+          </div>
+          <a href="/collection-new.html" class="btn btn-primary btn-touch">
+            <span aria-hidden="true">&#10133;</span> Nova coleta
+          </a>
+        </div>
+
+        <!-- Filtro de periodo -->
+        <div class="card mb-3">
+          <div class="card-body p-3">
+            <div class="row g-2 align-items-end">
+              <div class="col-12 col-sm-6 col-lg-3">
+                <label class="form-label" for="periodSelect">Periodo</label>
+                <select class="form-select" id="periodSelect">
+                  <option value="today">Hoje</option>
+                  <option value="week">Esta semana</option>
+                  <option value="month" selected>Este mes</option>
+                  <option value="last_month">Mes anterior</option>
+                  <option value="custom">Periodo personalizado</option>
+                </select>
+              </div>
+              <div class="col-6 col-lg-3 d-none" data-custom-range>
+                <label class="form-label" for="startDate">Data inicial</label>
+                <input type="date" class="form-control" id="startDate">
+              </div>
+              <div class="col-6 col-lg-3 d-none" data-custom-range>
+                <label class="form-label" for="endDate">Data final</label>
+                <input type="date" class="form-control" id="endDate">
+              </div>
+              <div class="col-12 col-lg-3 d-none" data-custom-range>
+                <button class="btn btn-outline-primary w-100 btn-touch" id="btnApplyPeriod">Aplicar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Metricas -->
+        <div class="row g-2 g-md-3 mb-3" id="metricsRow"></div>
+
+        <div class="row g-3">
+          <!-- Evolucao financeira -->
+          <div class="col-12 col-xl-7">
+            <div class="card h-100">
+              <div class="card-header">Evolucao financeira (ultimos 6 meses)</div>
+              <div class="card-body">
+                <div class="chart-wrap" id="chartWrap"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Resumo do periodo -->
+          <div class="col-12 col-xl-5">
+            <div class="card h-100">
+              <div class="card-header">Resumo financeiro do periodo</div>
+              <div class="card-body" id="financialSummary"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ultimas coletas -->
+        <div class="card mt-3">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <span>Ultimas coletas</span>
+            <a href="/collections.html" class="btn btn-sm btn-outline-primary">Ver todas</a>
+          </div>
+          <div class="card-body p-2 p-md-3">
+            <div id="latestCollections"></div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="/assets/vendor/bootstrap/bootstrap.bundle.min.js"></script>
+  <script src="/assets/js/api.js"></script>
+  <script src="/assets/js/utils.js"></script>
+  <script src="/assets/js/layout.js"></script>
+  <script src="/assets/js/dashboard.js"></script>
+</body>
+</html>

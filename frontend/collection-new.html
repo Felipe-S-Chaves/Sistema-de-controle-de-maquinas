@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Nova coleta - Controle de Maquinas</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link href="/assets/vendor/bootstrap/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/app.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-topbar" id="appTopbar"></header>
+    <div class="app-body">
+      <aside class="app-sidebar" id="appSidebar"></aside>
+      <main class="app-main" id="appMain">
+
+        <div class="mb-3">
+          <h1 class="h4 mb-1">Nova coleta</h1>
+          <p class="text-muted small mb-0">Siga os passos abaixo. O valor apurado e calculado automaticamente.</p>
+        </div>
+
+        <form id="collectionForm" novalidate>
+          <div class="row g-3">
+            <div class="col-12 col-xl-7">
+
+              <!-- Passo 1: proprietario -->
+              <div class="card step-card mb-3">
+                <div class="card-body p-3">
+                  <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="step-badge">1</span>
+                    <label class="form-label mb-0" for="ownerSelect">Proprietario</label>
+                  </div>
+                  <input type="search" class="form-control mb-2" id="ownerSearch"
+                         placeholder="Digite para filtrar o proprietario..." autocomplete="off">
+                  <select class="form-select" id="ownerSelect" name="owner_id" size="1" required>
+                    <option value="">Selecione o proprietario</option>
+                  </select>
+                  <div class="invalid-feedback" data-error-for="owner_id"></div>
+                </div>
+              </div>
+
+              <!-- Passo 2: maquina -->
+              <div class="card step-card mb-3 is-disabled" id="stepMachine">
+                <div class="card-body p-3">
+                  <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="step-badge">2</span>
+                    <label class="form-label mb-0" for="machineSelect">Maquina</label>
+                  </div>
+                  <select class="form-select" id="machineSelect" name="machine_id" required>
+                    <option value="">Selecione primeiro o proprietario</option>
+                  </select>
+                  <div class="invalid-feedback" data-error-for="machine_id"></div>
+                  <div id="machineStatusHint" class="mt-2"></div>
+                </div>
+              </div>
+
+              <!-- Passo 3: ultima leitura -->
+              <div class="card step-card mb-3 is-disabled" id="stepLastReading">
+                <div class="card-body p-3">
+                  <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="step-badge">3</span>
+                    <span class="form-label mb-0">Ultima leitura</span>
+                  </div>
+                  <div id="lastReadingBox">
+                    <p class="text-muted small mb-0">Selecione uma maquina para ver a ultima leitura.</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Passo 4: nova leitura -->
+              <div class="card step-card mb-3 is-disabled" id="stepNewReading">
+                <div class="card-body p-3">
+                  <div class="d-flex align-items-center gap-2 mb-3">
+                    <span class="step-badge">4</span>
+                    <span class="form-label mb-0">Nova leitura dos relogios</span>
+                  </div>
+
+                  <!-- Leitura anterior editavel: SOMENTE na primeira coleta -->
+                  <div class="alert alert-info py-2 px-3 small d-none" id="firstCollectionNotice">
+                    Esta e a <strong>primeira coleta</strong> desta maquina. Informe o valor que ja estava
+                    acumulado nos relogios para que o apurado saia correto. Se os relogios estavam zerados, deixe 0.
+                  </div>
+
+                  <div class="row g-3 d-none" id="firstPreviousFields">
+                    <div class="col-12 col-sm-6">
+                      <label class="form-label" for="previousEntry">Relogio de entrada anterior</label>
+                      <div class="input-group">
+                        <span class="input-group-text">R$</span>
+                        <input type="text" class="form-control" id="previousEntry" name="previous_entry_value"
+                               inputmode="decimal" placeholder="0,00">
+                      </div>
+                      <div class="invalid-feedback" data-error-for="previous_entry_value"></div>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                      <label class="form-label" for="previousExit">Relogio de saida anterior</label>
+                      <div class="input-group">
+                        <span class="input-group-text">R$</span>
+                        <input type="text" class="form-control" id="previousExit" name="previous_exit_value"
+                               inputmode="decimal" placeholder="0,00">
+                      </div>
+                      <div class="invalid-feedback" data-error-for="previous_exit_value"></div>
+                    </div>
+                    <div class="col-12"><hr class="my-1"></div>
+                  </div>
+
+                  <div class="row g-3">
+                    <div class="col-12 col-sm-6">
+                      <label class="form-label" for="currentEntry">
+                        Novo relogio de entrada <span class="text-danger">*</span>
+                      </label>
+                      <div class="input-group">
+                        <span class="input-group-text">R$</span>
+                        <input type="text" class="form-control form-control-lg" id="currentEntry"
+                               name="current_entry_value" inputmode="decimal" placeholder="0,00" required>
+                      </div>
+                      <div class="form-text">Valor acumulado inserido na maquina.</div>
+                      <div class="invalid-feedback" data-error-for="current_entry_value"></div>
+                    </div>
+
+                    <div class="col-12 col-sm-6">
+                      <label class="form-label" for="currentExit">
+                        Novo relogio de saida <span class="text-danger">*</span>
+                      </label>
+                      <div class="input-group">
+                        <span class="input-group-text">R$</span>
+                        <input type="text" class="form-control form-control-lg" id="currentExit"
+                               name="current_exit_value" inputmode="decimal" placeholder="0,00" required>
+                      </div>
+                      <div class="form-text">Valor acumulado pago pela maquina.</div>
+                      <div class="invalid-feedback" data-error-for="current_exit_value"></div>
+                    </div>
+                  </div>
+
+                  <!-- Excecao: leitura menor que a anterior -->
+                  <div class="alert alert-warning mt-3 mb-0 d-none" id="exceptionBox">
+                    <p class="fw-semibold mb-2" id="exceptionMessage"></p>
+                    <div class="form-check mb-2">
+                      <input class="form-check-input" type="checkbox" id="confirmException" name="confirm_exception" value="true">
+                      <label class="form-check-label" for="confirmException">
+                        Confirmo que a leitura esta correta e registro esta excecao
+                      </label>
+                    </div>
+                    <label class="form-label" for="exceptionReason">Motivo da excecao</label>
+                    <textarea class="form-control" id="exceptionReason" name="exception_reason" rows="2"
+                              placeholder="Ex.: contador reiniciado pelo tecnico durante manutencao"></textarea>
+                    <div class="invalid-feedback" data-error-for="exception_reason"></div>
+                  </div>
+                </div>
+              </div>
+
+
+            </div>
+
+            <!-- Coluna do calculo (fixa no desktop) -->
+            <div class="col-12 col-xl-5">
+              <div>
+                <div class="card mb-3">
+                  <div class="card-body p-3">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                      <span class="step-badge">5</span>
+                      <span class="form-label mb-0">Calculo automatico</span>
+                    </div>
+                    <div id="calculationBox"></div>
+                  </div>
+                </div>
+
+
+                <!-- Passo 6: fotos -->
+                <div class="card step-card mb-3 is-disabled" id="stepPhotos">
+                  <div class="card-body p-3">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                      <span class="step-badge">6</span>
+                      <span class="form-label mb-0">Fotos / comprovantes <span class="text-danger">*</span></span>
+                    </div>
+                    <p class="text-muted small">Pelo menos uma foto e obrigatoria. Voce pode enviar varias.</p>
+
+                    <input type="file" class="d-none" id="photoInput" accept="image/jpeg,image/png,image/webp" multiple capture="environment">
+                    <div class="d-grid gap-2 d-sm-flex">
+                      <button type="button" class="btn btn-outline-primary btn-touch flex-fill" id="btnTakePhoto">
+                        <span aria-hidden="true">&#128247;</span> Adicionar foto
+                      </button>
+                    </div>
+                    <div class="invalid-feedback" data-error-for="images"></div>
+                    <div class="photo-grid mt-3" id="photoPreview"></div>
+                  </div>
+                </div>
+
+                <!-- Passo 7: observacao -->
+                <div class="card step-card mb-3 is-disabled" id="stepObservation">
+                  <div class="card-body p-3">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                      <span class="step-badge">7</span>
+                      <label class="form-label mb-0" for="observation">Observacao (opcional)</label>
+                    </div>
+                    <textarea class="form-control" id="observation" name="observation" rows="3" maxlength="2000"
+                              placeholder="Ex.: coleta realizada normalmente."></textarea>
+                    <div class="invalid-feedback" data-error-for="observation"></div>
+                  </div>
+                </div>
+
+                <div class="d-grid gap-2">
+                  <button type="submit" class="btn btn-primary btn-lg" id="btnSaveCollection" disabled>
+                    Salvar coleta
+                  </button>
+                  <a href="/collections.html" class="btn btn-outline-secondary btn-touch">Cancelar</a>
+                </div>
+                <p class="text-muted small text-center mt-2 mb-0">
+                  Data, hora e usuario responsavel sao registrados automaticamente.
+                </p>
+              </div>
+            </div>
+          </div>
+        </form>
+      </main>
+    </div>
+  </div>
+
+  <script src="/assets/vendor/bootstrap/bootstrap.bundle.min.js"></script>
+  <script src="/assets/js/api.js"></script>
+  <script src="/assets/js/utils.js"></script>
+  <script src="/assets/js/layout.js"></script>
+  <script src="/assets/js/collection-new.js"></script>
+</body>
+</html>

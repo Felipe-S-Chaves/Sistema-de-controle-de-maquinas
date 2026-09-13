@@ -1,0 +1,41 @@
+{
+  "name": "sistema-controle-maquinas",
+  "version": "1.0.0",
+  "description": "Sistema de gestao operacional e financeira de maquinas de musica",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "node --watch backend/server.js",
+    "migrate": "node backend/database/migrate.js",
+    "seed": "node backend/database/seed.js",
+    "reset": "node backend/database/migrate.js --fresh && node backend/database/seed.js",
+    "test": "node --test --test-concurrency=1 tests/calculator.test.js tests/validation.test.js tests/api.test.js tests/browser.test.js",
+    "vendor": "node scripts/copy-vendor.js",
+    "postinstall": "node scripts/copy-vendor.js",
+    "test:unit": "node --test tests/calculator.test.js tests/validation.test.js",
+    "test:api": "node --test tests/api.test.js",
+    "test:browser": "node --test tests/browser.test.js",
+    "setup": "node backend/database/install.js",
+    "db:check": "node backend/database/check.js",
+    "db:setup": "node backend/database/setup.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.4.0",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "mysql2": "^3.11.0",
+    "pdfkit": "^0.15.0",
+    "bootstrap": "^5.3.3"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^23.0.0"
+  }
+}

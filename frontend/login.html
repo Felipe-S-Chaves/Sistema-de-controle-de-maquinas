@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Entrar - Controle de Maquinas</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link href="/assets/vendor/bootstrap/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/app.css">
+</head>
+<body class="bg-light">
+  <main class="container-fluid px-3">
+    <div class="row justify-content-center align-items-center" style="min-height:100vh">
+      <div class="col-12 col-sm-10 col-md-7 col-lg-5 col-xl-4 py-4">
+
+        <div class="text-center mb-4">
+          <div class="d-inline-grid mb-2" style="width:56px;height:56px;place-items:center;border-radius:14px;background:var(--brand);color:#fff;font-size:1.5rem">&#127925;</div>
+          <h1 class="h4 mb-1">Controle de Maquinas</h1>
+          <p class="text-muted small mb-0">Gestao operacional e financeira</p>
+        </div>
+
+        <div class="card">
+          <div class="card-body p-3 p-sm-4">
+            <div id="loginAlert" class="alert alert-danger d-none" role="alert"></div>
+
+            <form id="loginForm" novalidate>
+              <div class="mb-3">
+                <label class="form-label" for="email">E-mail</label>
+                <input type="email" class="form-control" id="email" name="email"
+                       autocomplete="username" inputmode="email" required autofocus>
+                <div class="invalid-feedback" data-error-for="email"></div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label" for="password">Senha</label>
+                <div class="input-group">
+                  <input type="password" class="form-control" id="password" name="password"
+                         autocomplete="current-password" required>
+                  <button class="btn btn-outline-secondary" type="button" id="btnTogglePassword"
+                          aria-label="Mostrar senha">&#128065;</button>
+                </div>
+                <div class="invalid-feedback" data-error-for="password"></div>
+              </div>
+
+              <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" id="remember">
+                <label class="form-check-label" for="remember">Manter conectado neste dispositivo</label>
+              </div>
+
+              <button type="submit" class="btn btn-primary btn-lg w-100" id="btnLogin">Entrar</button>
+            </form>
+          </div>
+        </div>
+
+        <p class="text-center text-muted small mt-3 mb-0">
+          Acesso restrito. Todas as operacoes sao registradas.
+        </p>
+      </div>
+    </div>
+  </main>
+
+  <script src="/assets/vendor/bootstrap/bootstrap.bundle.min.js"></script>
+  <script src="/assets/js/api.js"></script>
+  <script src="/assets/js/utils.js"></script>
+  <script src="/assets/js/auth.js"></script>
+</body>
+</html>

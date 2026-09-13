@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Auditoria - Controle de Maquinas</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link href="/assets/vendor/bootstrap/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/app.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-topbar" id="appTopbar"></header>
+    <div class="app-body">
+      <aside class="app-sidebar" id="appSidebar"></aside>
+      <main class="app-main" id="appMain">
+
+        <div class="mb-3">
+          <h1 class="h4 mb-1">Auditoria</h1>
+          <p class="text-muted small mb-0">Registro imutavel das operacoes realizadas no sistema.</p>
+        </div>
+
+        <div class="card mb-3">
+          <div class="card-body p-3">
+            <div class="row g-2 align-items-end">
+              <div class="col-12 col-sm-6 col-md-4">
+                <label class="form-label" for="entityFilter">Entidade</label>
+                <select class="form-select" id="entityFilter">
+                  <option value="">Todas</option>
+                  <option value="collection">Coletas</option>
+                  <option value="owner">Proprietarios</option>
+                  <option value="machine">Maquinas</option>
+                  <option value="auth">Autenticacao</option>
+                  <option value="user">Usuarios</option>
+                </select>
+              </div>
+              <div class="col-6 col-md-4">
+                <label class="form-label" for="startDate">De</label>
+                <input type="date" class="form-control" id="startDate">
+              </div>
+              <div class="col-6 col-md-4">
+                <label class="form-label" for="endDate">Ate</label>
+                <input type="date" class="form-control" id="endDate">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-body p-2 p-md-3">
+            <div id="auditList"></div>
+            <div id="auditPagination" class="mt-3"></div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="/assets/vendor/bootstrap/bootstrap.bundle.min.js"></script>
+  <script src="/assets/js/api.js"></script>
+  <script src="/assets/js/utils.js"></script>
+  <script src="/assets/js/layout.js"></script>
+  <script src="/assets/js/audit.js"></script>
+</body>
+</html>

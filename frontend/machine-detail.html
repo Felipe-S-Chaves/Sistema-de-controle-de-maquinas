@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Maquina - Controle de Maquinas</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link href="/assets/vendor/bootstrap/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/app.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-topbar" id="appTopbar"></header>
+    <div class="app-body">
+      <aside class="app-sidebar" id="appSidebar"></aside>
+      <main class="app-main" id="appMain">
+
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb small">
+            <li class="breadcrumb-item"><a href="/machines.html">Maquinas</a></li>
+            <li class="breadcrumb-item active" aria-current="page" id="crumbName">Detalhes</li>
+          </ol>
+        </nav>
+
+        <div id="machineContent"></div>
+      </main>
+    </div>
+  </div>
+
+  <script src="/assets/vendor/bootstrap/bootstrap.bundle.min.js"></script>
+  <script src="/assets/js/api.js"></script>
+  <script src="/assets/js/utils.js"></script>
+  <script src="/assets/js/layout.js"></script>
+  <script src="/assets/js/machine-detail.js"></script>
+</body>
+</html>

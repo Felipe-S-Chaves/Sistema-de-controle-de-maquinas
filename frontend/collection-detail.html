@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Coleta - Controle de Maquinas</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link href="/assets/vendor/bootstrap/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/app.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-topbar" id="appTopbar"></header>
+    <div class="app-body">
+      <aside class="app-sidebar" id="appSidebar"></aside>
+      <main class="app-main" id="appMain">
+
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb small">
+            <li class="breadcrumb-item"><a href="/collections.html">Coletas</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Detalhes</li>
+          </ol>
+        </nav>
+
+        <div id="collectionContent"></div>
+
+        <!-- Galeria em tela cheia -->
+        <div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
+          <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="imageModalTitle">Comprovante</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+              </div>
+              <div class="modal-body text-center">
+                <img id="imageModalImg" alt="Comprovante da coleta" class="img-fluid rounded">
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-outline-primary btn-touch w-100 w-sm-auto" id="btnDownloadImage">
+                  Baixar imagem
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="/assets/vendor/bootstrap/bootstrap.bundle.min.js"></script>
+  <script src="/assets/js/api.js"></script>
+  <script src="/assets/js/utils.js"></script>
+  <script src="/assets/js/layout.js"></script>
+  <script src="/assets/js/collection-detail.js"></script>
+</body>
+</html>
