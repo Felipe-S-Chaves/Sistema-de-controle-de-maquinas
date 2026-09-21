@@ -26,8 +26,21 @@ async function resetDatabase() {
   await migrate();
   process.argv = process.argv.filter((a) => a !== '--fresh');
 
-  const { seedAdmin } = require('../backend/database/seed');
+  const { seedAdmin, seedSegundaConta } = require('../backend/database/seed');
   await seedAdmin();
+
+  // A segunda conta nasce com senha temporaria sorteada. Os testes precisam
+  // dela, entao o seed e chamado com o console silenciado e a senha e
+  // capturada da linha impressa.
+  const original = console.log;
+  let capturada = null;
+  console.log = (...args) => {
+    const linha = args.join(' ');
+    const m = /Senha temporaria\.: (\S+)/.exec(linha);
+    if (m) capturada = m[1];
+  };
+  try { await seedSegundaConta(); } finally { console.log = original; }
+  global.__SENHA_TMP__ = capturada;
 }
 
 async function startServer() {
@@ -73,16 +86,47 @@ function client(token) {
     post: (p, body) => request('POST', p, { body }),
     put: (p, body) => request('PUT', p, { body }),
     patch: (p, body) => request('PATCH', p, { body }),
+    del: (p) => request('DELETE', p),
     upload: (p, formData) => request('POST', p, { formData }),
+    uploadPut: (p, formData) => request('PUT', p, { formData }),
     raw: (p) => request('GET', p, { raw: true }),
     withToken: (t) => client(t)
   };
 }
 
+/**
+ * Recria a segunda conta com uma senha temporaria nova.
+ * Usado pelo teste que prova o bloqueio da senha temporaria - ele precisa de
+ * uma conta que ainda nao trocou a senha.
+ */
+async function resetSegundaConta() {
+  const db = require('../backend/config/database');
+  const config = require('../backend/config/env');
+  await db.query('DELETE FROM users WHERE email = ?', [config.admin2.email]);
+
+  const { seedSegundaConta } = require('../backend/database/seed');
+  const original = console.log;
+  let capturada = null;
+  console.log = (...args) => {
+    const m = /Senha temporaria\.: (\S+)/.exec(args.join(' '));
+    if (m) capturada = m[1];
+  };
+  try { await seedSegundaConta(); } finally { console.log = original; }
+
+  global.__SENHA_TMP__ = capturada;
+  return capturada;
+}
+
 async function login(email = 'admin@sistema.local', password = 'Admin@123') {
+  const { token } = await loginFull(email, password);
+  return token;
+}
+
+/** Login devolvendo token E usuario (com as permissoes do papel). */
+async function loginFull(email = 'admin@sistema.local', password = 'Admin@123') {
   const result = await client().post('/api/auth/login', { email, password });
   if (!result.body.success) throw new Error('Falha no login de teste: ' + JSON.stringify(result.body));
-  return result.body.data.token;
+  return { token: result.body.data.token, user: result.body.data.user };
 }
 
 // --------------------------------------------------------------------
@@ -138,6 +182,21 @@ function collectionForm(fields, imageCount = 1) {
   return form;
 }
 
+/**
+ * FormData do cadastro de cliente.
+ * A foto do documento e obrigatoria, entao ela vem junto por padrao.
+ */
+function ownerForm(fields, comFoto = true) {
+  const form = new FormData();
+  Object.keys(fields).forEach((key) => {
+    if (fields[key] !== undefined && fields[key] !== null) form.append(key, String(fields[key]));
+  });
+  if (comFoto) {
+    form.append('document_photo', new Blob([makePng()], { type: 'image/png' }), 'documento.png');
+  }
+  return form;
+}
+
 /** FormData com um arquivo que so finge ser imagem. */
 function fakeImageForm(fields) {
   const form = new FormData();
@@ -156,8 +215,25 @@ function cleanUploads() {
   }
 }
 
+/** Quantas fotos de coleta existem no disco agora. */
+function countUploads() {
+  const dir = require('../backend/config/env').uploads.dir;
+  if (!fs.existsSync(dir)) return 0;
+
+  let total = 0;
+  const andar = (atual) => {
+    for (const entry of fs.readdirSync(atual, { withFileTypes: true })) {
+      if (entry.name === '.gitkeep') continue;
+      const cheio = path.join(atual, entry.name);
+      if (entry.isDirectory()) andar(cheio); else total += 1;
+    }
+  };
+  andar(dir);
+  return total;
+}
+
 module.exports = {
-  ROOT, resetDatabase, startServer, stopServer, client, login,
-  makePng, collectionForm, fakeImageForm, cleanUploads,
+  ROOT, resetDatabase, resetSegundaConta, startServer, stopServer, client, login, loginFull,
+  makePng, collectionForm, ownerForm, fakeImageForm, cleanUploads, countUploads,
   get baseUrl() { return baseUrl; }
 };

@@ -83,6 +83,20 @@ window.Api = (function () {
           throw new ApiError('Sua sessao expirou. Faca login novamente.', 'UNAUTHORIZED', null, 401);
         }
 
+        // Senha temporaria: o backend fecha tudo ate a troca. Em vez de mostrar
+        // o erro em cada tela, mandamos a pessoa para onde ela resolve isso.
+        if (response.status === 403 && !/\/change-password\.html$/.test(window.location.pathname)) {
+          var tipo = response.headers.get('content-type') || '';
+          if (tipo.indexOf('application/json') !== -1) {
+            return response.json().then(function (corpo) {
+              if (corpo && corpo.error === 'PASSWORD_CHANGE_REQUIRED') {
+                window.location.replace('/change-password.html?required=1');
+              }
+              throw new ApiError(corpo.message, corpo.error, corpo.details, 403);
+            });
+          }
+        }
+
         var contentType = response.headers.get('content-type') || '';
 
         if (contentType.indexOf('application/json') === -1) {
@@ -113,14 +127,46 @@ window.Api = (function () {
     getToken: getToken,
     getUser: getUser,
     setSession: setSession,
+
+    /** Atualiza os dados do usuario guardado, mantendo o token e onde ele esta. */
+    updateUser: function (user) {
+      try {
+        var store = localStorage.getItem(TOKEN_KEY) ? localStorage : sessionStorage;
+        store.setItem(USER_KEY, JSON.stringify(user));
+      } catch (e) { /* armazenamento indisponivel */ }
+    },
+
     clearSession: clearSession,
     isAuthenticated: function () { return !!getToken(); },
+
+    /** O usuario logado tem esta permissao? Espelha config/permissions.js do backend. */
+    can: function (permissao) {
+      var user = getUser();
+      return !!(user && Array.isArray(user.permissions) && user.permissions.indexOf(permissao) !== -1);
+    },
+
+    /**
+     * Tela inicial do usuario conforme o perfil.
+     * O operador nao tem dashboard: ele cai direto na nova coleta,
+     * que e o trabalho dele no dia a dia.
+     */
+    homePage: function () {
+      return this.can('dashboard.full') ? '/index.html' : '/collection-new.html';
+    },
+
+    /** Papel do usuario logado. */
+    role: function () {
+      var user = getUser();
+      return user ? user.role : null;
+    },
 
     get: function (path, params) { return request('GET', path, { params: params }); },
     post: function (path, body, params) { return request('POST', path, { body: body, params: params }); },
     put: function (path, body) { return request('PUT', path, { body: body }); },
     patch: function (path, body) { return request('PATCH', path, { body: body }); },
+    del: function (path, params) { return request('DELETE', path, { params: params }); },
     upload: function (path, formData) { return request('POST', path, { formData: formData }); },
+    uploadPut: function (path, formData) { return request('PUT', path, { formData: formData }); },
 
     /** Baixa um arquivo autenticado (PDF, imagem). */
     download: function (path, params, filename) {
@@ -139,9 +185,16 @@ window.Api = (function () {
     /**
      * Carrega uma imagem protegida em um <img>.
      * O token vai no header (nunca na URL, que acabaria em logs e historico).
+     *
+     * Aceita o id de uma imagem de coleta ou um caminho completo da API -
+     * e o caso da foto do documento do cliente.
      */
-    loadImageInto: function (imgElement, imageId) {
-      return request('GET', '/collections/images/' + imageId).then(function (blob) {
+    loadImageInto: function (imgElement, imageIdOuCaminho) {
+      var caminho = String(imageIdOuCaminho).charAt(0) === '/'
+        ? imageIdOuCaminho
+        : '/collections/images/' + imageIdOuCaminho;
+
+      return request('GET', caminho).then(function (blob) {
         var url = URL.createObjectURL(blob);
         imgElement.src = url;
         imgElement.addEventListener('load', function () {
@@ -149,6 +202,12 @@ window.Api = (function () {
         }, { once: true });
         return url;
       });
+    },
+
+    /** Baixa o comprovante em PDF de uma coleta. */
+    downloadReceipt: function (collectionId) {
+      var nome = 'comprovante-coleta-' + String(collectionId).padStart(6, '0') + '.pdf';
+      return this.download('/collections/' + collectionId + '/receipt', null, nome);
     },
 
     /** Baixa o arquivo original de uma imagem da coleta. */

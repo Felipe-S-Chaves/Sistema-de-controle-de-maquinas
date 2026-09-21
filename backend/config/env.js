@@ -55,7 +55,17 @@ const config = {
   admin: {
     name: process.env.ADMIN_NAME || 'Administrador',
     email: process.env.ADMIN_EMAIL || 'admin@sistema.local',
-    password: process.env.ADMIN_PASSWORD || 'Admin@123'
+    password: process.env.ADMIN_PASSWORD || 'Admin@123',
+    accountName: process.env.ACCOUNT_NAME || 'Conta principal'
+  },
+
+  // Segunda conta, completamente separada da primeira. A senha nao fica em
+  // lugar nenhum: e sorteada na instalacao, mostrada uma vez no terminal e
+  // precisa ser trocada no primeiro acesso.
+  admin2: {
+    name: process.env.ADMIN2_NAME || 'Administrador Megaplay',
+    email: process.env.ADMIN2_EMAIL || 'megaplay@gmail.com',
+    accountName: process.env.ACCOUNT2_NAME || 'Megaplay'
   },
 
   uploads: {

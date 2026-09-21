@@ -7,6 +7,12 @@
   document.addEventListener('DOMContentLoaded', function () {
     if (!Api.isAuthenticated()) return;
 
+    // O operador nao tem dashboard: vai para a tela de coleta.
+    if (!Api.can('dashboard.full')) {
+      window.location.replace('/collection-new.html');
+      return;
+    }
+
     bindPeriodFilter();
     load();
   });
@@ -55,6 +61,7 @@
       .then(function (payload) {
         var data = payload.data;
         document.getElementById('periodLabel').textContent = 'Periodo: ' + data.metrics.period_label;
+
         renderMetrics(data.metrics);
         renderFinancialSummary(data.metrics);
         renderChart(data.monthly_series);
@@ -93,12 +100,12 @@
   function renderMetrics(m) {
     var totalClass = Number(m.total_value) < 0 ? 'value-negative' : 'value-positive';
     document.getElementById('metricsRow').innerHTML =
-      metricCard('Proprietarios', m.owners_total, '&#128100;') +
+      metricCard('Clientes', m.owners_total, '&#128100;') +
       metricCard('Maquinas', m.machines_total, '&#127925;') +
       metricCard('Maquinas ativas', m.machines_active, '&#9989;') +
       metricCard('Em manutencao', m.machines_maintenance, '&#128295;') +
       metricCard('Coletas no periodo', m.collections_count, '&#128203;') +
-      metricCard('Valor apurado', Utils.formatMoney(m.total_value), '&#128176;', totalClass + ' is-long');
+      metricCard('Valor bruto', Utils.formatMoney(m.total_value), '&#128176;', totalClass + ' is-long');
   }
 
   function renderFinancialSummary(m) {
@@ -116,7 +123,7 @@
       '</dl>' +
       '<hr>' +
       '<div class="d-flex justify-content-between align-items-baseline gap-2">' +
-      '  <span class="fw-semibold">Total apurado</span>' +
+      '  <span class="fw-semibold">Total bruto</span>' +
       '  <span class="fs-5 fw-bold ' + totalClass + '">' + Utils.formatMoney(m.total_value) + '</span>' +
       '</div>' +
       '<p class="text-muted small mb-0 mt-2">Apurado = entrada apurada &minus; saida apurada. ' +
@@ -152,7 +159,7 @@
     var zeroY = padding.top + innerH * (maxValue / range);
 
     var svg = '<svg viewBox="0 0 ' + width + ' ' + height + '" role="img" ' +
-      'aria-label="Evolucao do valor apurado por mes" style="width:100%;height:auto;display:block">';
+      'aria-label="Evolucao do valor bruto por mes" style="width:100%;height:auto;display:block">';
 
     // Linhas de grade
     for (var g = 0; g <= 4; g += 1) {
@@ -215,12 +222,12 @@
       return '' +
         '<tr>' +
         '  <td data-label="Data">' + Utils.formatDateTime(c.collected_at) + '</td>' +
-        '  <td data-label="Proprietario"><a href="/owner-detail.html?id=' + c.owner_id + '">' +
+        '  <td data-label="Cliente"><a href="/owner-detail.html?id=' + c.owner_id + '">' +
         Utils.escapeHtml(c.owner_name) + '</a></td>' +
         '  <td data-label="Maquina">' + Utils.escapeHtml(Utils.machineLabel(c)) + '</td>' +
         '  <td data-label="Entrada" class="text-end">' + Utils.formatMoney(c.current_entry_value) + '</td>' +
         '  <td data-label="Saida" class="text-end">' + Utils.formatMoney(c.current_exit_value) + '</td>' +
-        '  <td data-label="Apurado" class="text-end fw-semibold ' + totalClass + '">' +
+        '  <td data-label="Valor bruto" class="text-end fw-semibold ' + totalClass + '">' +
         Utils.formatMoney(c.calculated_total_value) + '</td>' +
         '  <td data-label="Status">' + Utils.statusBadge(c.status) + '</td>' +
         '  <td data-label="" class="cell-actions text-end">' +
@@ -233,9 +240,9 @@
       '<div class="table-responsive-cards">' +
       '<table class="table table-hover align-middle mb-0">' +
       '  <thead><tr>' +
-      '    <th>Data</th><th>Proprietario</th><th>Maquina</th>' +
+      '    <th>Data</th><th>Cliente</th><th>Maquina</th>' +
       '    <th class="text-end">Entrada</th><th class="text-end">Saida</th>' +
-      '    <th class="text-end">Apurado</th><th>Status</th><th></th>' +
+      '    <th class="text-end">Valor bruto</th><th>Status</th><th></th>' +
       '  </tr></thead>' +
       '  <tbody>' + rows + '</tbody>' +
       '</table></div>';

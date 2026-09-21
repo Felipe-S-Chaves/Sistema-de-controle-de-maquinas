@@ -45,6 +45,49 @@ window.Utils = (function () {
     return number === null ? null : Math.round(number * 100);
   }
 
+  // ---------------------------------------------------------------
+  // Leitura de relogio
+  //
+  // O visor da maquina nao tem ponto nem virgula: mostra 280900, e os dois
+  // ultimos digitos sao os centavos - ou seja, R$ 2.809,00. Deixar o operador
+  // digitar exatamente o que ve elimina a maior fonte de erro do
+  // preenchimento, que era ele tentar pontuar o numero na mao.
+  //
+  // Na pratica os digitos JA SAO os centavos, entao a conversao e direta.
+  // ---------------------------------------------------------------
+  var MAX_DIGITOS_RELOGIO = 12;   // cabe em DECIMAL(14,2) contado em centavos
+
+  /** Mantem so os digitos e derruba zeros a esquerda. */
+  function readingDigits(value) {
+    var digitos = String(value === null || value === undefined ? '' : value).replace(/\D/g, '');
+    return digitos.replace(/^0+(?=\d)/, '').slice(0, MAX_DIGITOS_RELOGIO);
+  }
+
+  /**
+   * Digitos do visor -> centavos.
+   * Como os digitos ja sao os centavos, 280900 vira 280900 centavos.
+   * Um valor colado ja formatado ("R$ 2.809,00") cai aqui tambem: os
+   * separadores somem e sobram exatamente os mesmos digitos.
+   */
+  function readingToCents(value) {
+    var digitos = readingDigits(value);
+    return digitos === '' ? null : Number(digitos);
+  }
+
+  /** Centavos -> digitos, para mostrar a leitura como ela aparece na maquina. */
+  function centsToReading(cents) {
+    return String(Math.round(Math.abs(cents || 0)));
+  }
+
+  /**
+   * Metade de um valor, arredondada ao centavo.
+   * Usada so na leitura do relatorio - nada do que foi gravado muda.
+   */
+  function metade(value) {
+    var cents = toCents(value);
+    return cents === null ? null : Math.round(cents / 2);
+  }
+
   function centsToMoney(cents) {
     if (cents === null || cents === undefined) return 'R$ 0,00';
     return formatMoney(cents / 100);
@@ -103,6 +146,73 @@ window.Utils = (function () {
   }
 
   /** Escapa texto antes de injetar em HTML (defesa contra XSS). */
+  // ---------------------------------------------------------------
+  // Fotos
+  // ---------------------------------------------------------------
+
+  /**
+   * Reduz a foto antes de enviar.
+   *
+   * A camera de um celular produz arquivos de 3 a 8 MB. Em 4G, no local da
+   * maquina ou na casa do cliente, isso significa dezenas de segundos de
+   * upload por foto. Reduzindo para 1600px de lado maior em JPEG, o arquivo
+   * cai para algumas centenas de KB sem perder a legibilidade dos numeros do
+   * relogio nem dos dados do documento.
+   *
+   * Se qualquer etapa falhar, devolve o arquivo original: nenhum cadastro
+   * pode ser impedido por causa da compressao.
+   */
+  function comprimirImagem(file, opcoes) {
+    var ladoMaximo = (opcoes && opcoes.ladoMaximo) || 1600;
+    var qualidade = (opcoes && opcoes.qualidade) || 0.82;
+
+    return new Promise(function (resolve) {
+      if (!window.URL || !window.HTMLCanvasElement) { resolve(file); return; }
+
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+
+      var desistir = function () { URL.revokeObjectURL(url); resolve(file); };
+
+      img.onerror = desistir;
+      img.onload = function () {
+        try {
+          var escala = Math.min(1, ladoMaximo / Math.max(img.width, img.height));
+
+          // Ja e pequena o bastante: nao vale reprocessar.
+          if (escala === 1 && file.size <= 1024 * 1024) { desistir(); return; }
+
+          var canvas = document.createElement('canvas');
+          canvas.width = Math.round(img.width * escala);
+          canvas.height = Math.round(img.height * escala);
+
+          var ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+          canvas.toBlob(function (blob) {
+            URL.revokeObjectURL(url);
+
+            // Se a "compressao" nao ajudou, fica com o original.
+            if (!blob || blob.size >= file.size) { resolve(file); return; }
+
+            var nome = (file.name || 'foto').replace(/\.[^.]+$/, '') + '.jpg';
+            resolve(new File([blob], nome, { type: 'image/jpeg', lastModified: Date.now() }));
+          }, 'image/jpeg', qualidade);
+        } catch (erro) {
+          desistir();
+        }
+      };
+
+      img.src = url;
+    });
+  }
+
+  /** Tamanho de arquivo em unidade legivel. */
+  function tamanhoLegivel(bytes) {
+    if (bytes >= 1024 * 1024) return (bytes / 1024 / 1024).toFixed(1).replace('.', ',') + ' MB';
+    return Math.round(bytes / 1024) + ' KB';
+  }
+
   function escapeHtml(value) {
     if (value === null || value === undefined) return '';
     return String(value)
@@ -381,6 +491,8 @@ window.Utils = (function () {
     notify: notify, renderLoading: renderLoading, renderEmpty: renderEmpty, renderError: renderError,
     setButtonLoading: setButtonLoading,
     clearFieldErrors: clearFieldErrors, applyFieldErrors: applyFieldErrors, handleApiError: handleApiError,
+    readingDigits: readingDigits, readingToCents: readingToCents, centsToReading: centsToReading,
+    comprimirImagem: comprimirImagem, tamanhoLegivel: tamanhoLegivel, metade: metade,
     formToObject: formToObject, debounce: debounce, queryParam: queryParam,
     confirmAction: confirmAction, renderPagination: renderPagination
   };

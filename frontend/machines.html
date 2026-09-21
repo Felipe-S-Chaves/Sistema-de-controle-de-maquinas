@@ -28,10 +28,10 @@
               <div class="col-12 col-md-5">
                 <label class="form-label" for="searchInput">Pesquisar</label>
                 <input type="search" class="form-control" id="searchInput"
-                       placeholder="Numero, nome ou proprietario" autocomplete="off">
+                       placeholder="Numero, nome ou cliente" autocomplete="off">
               </div>
               <div class="col-12 col-sm-6 col-md-4">
-                <label class="form-label" for="ownerFilter">Proprietario</label>
+                <label class="form-label" for="ownerFilter">Cliente</label>
                 <select class="form-select" id="ownerFilter"><option value="">Todos</option></select>
               </div>
               <div class="col-12 col-sm-6 col-md-3">
@@ -75,24 +75,9 @@
                     <div class="invalid-feedback" data-error-for="name"></div>
                   </div>
                   <div class="col-12">
-                    <label class="form-label" for="machineOwner">Proprietario <span class="text-danger">*</span></label>
+                    <label class="form-label" for="machineOwner">Cliente <span class="text-danger">*</span></label>
                     <select class="form-select" id="machineOwner" name="owner_id" required></select>
                     <div class="invalid-feedback" data-error-for="owner_id"></div>
-                  </div>
-                  <div class="col-12 col-md-6">
-                    <label class="form-label" for="machineModel">Modelo</label>
-                    <input type="text" class="form-control" id="machineModel" name="model" maxlength="120">
-                    <div class="invalid-feedback" data-error-for="model"></div>
-                  </div>
-                  <div class="col-12 col-md-6">
-                    <label class="form-label" for="machineManufacturer">Fabricante</label>
-                    <input type="text" class="form-control" id="machineManufacturer" name="manufacturer" maxlength="120">
-                    <div class="invalid-feedback" data-error-for="manufacturer"></div>
-                  </div>
-                  <div class="col-12 col-md-6">
-                    <label class="form-label" for="machineSerial">Numero de serie</label>
-                    <input type="text" class="form-control" id="machineSerial" name="serial_number" maxlength="120">
-                    <div class="invalid-feedback" data-error-for="serial_number"></div>
                   </div>
                   <div class="col-12 col-md-6">
                     <label class="form-label" for="machineInstall">Data de instalacao</label>
@@ -129,6 +114,7 @@
   <script src="/assets/js/api.js"></script>
   <script src="/assets/js/utils.js"></script>
   <script src="/assets/js/layout.js"></script>
+  <script src="/assets/js/deletion.js"></script>
   <script src="/assets/js/machines.js"></script>
 </body>
 </html>

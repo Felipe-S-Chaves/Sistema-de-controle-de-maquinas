@@ -40,7 +40,7 @@
       '<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">' +
       '  <div class="min-w-0">' +
       '    <h1 class="h4 mb-1 text-break-anywhere">' + Utils.escapeHtml(label) + '</h1>' +
-      '    <p class="mb-1 small text-muted">Proprietario: ' +
+      '    <p class="mb-1 small text-muted">Cliente: ' +
       '<a href="/owner-detail.html?id=' + machine.owner_id + '">' + Utils.escapeHtml(machine.owner_name) + '</a></p>' +
       '    <div>' + Utils.statusBadge(machine.status) + '</div>' +
       '  </div>' +
@@ -63,7 +63,7 @@
           '<dl class="row mb-0 small">' +
           infoRow('Entrada apurada', Utils.formatMoney(last.calculated_entry_value)) +
           infoRow('Saida apurada', Utils.formatMoney(last.calculated_exit_value)) +
-          infoRow('Valor apurado', '<strong>' + Utils.formatMoney(last.calculated_total_value) + '</strong>') +
+          infoRow('Valor bruto', '<strong>' + Utils.formatMoney(last.calculated_total_value) + '</strong>') +
           infoRow('Data da coleta', Utils.formatDateTime(last.collected_at)) +
           '</dl>'
         : '<div class="state-block py-4"><div class="state-icon">&#128203;</div>' +
@@ -75,9 +75,6 @@
       '  <div class="col-12 col-lg-6">' +
       '    <div class="card h-100"><div class="card-header">Dados e totais</div><div class="card-body">' +
       '      <dl class="row mb-0 small">' +
-      infoRow('Modelo', Utils.escapeHtml(machine.model || '-')) +
-      infoRow('Fabricante', Utils.escapeHtml(machine.manufacturer || '-')) +
-      infoRow('Numero de serie', Utils.escapeHtml(machine.serial_number || '-')) +
       infoRow('Instalacao', machine.installation_date ? Utils.formatDate(machine.installation_date) : '-') +
       infoRow('Coletas no mes', String(s.month.collections_count)) +
       infoRow('Entrada apurada no mes', Utils.formatMoney(s.month.total_entry)) +
@@ -85,7 +82,7 @@
       '      </dl>' +
       '      <hr>' +
       '      <div class="d-flex justify-content-between align-items-baseline gap-2">' +
-      '        <span class="fw-semibold">Total apurado no mes</span>' +
+      '        <span class="fw-semibold">Total bruto no mes</span>' +
       '        <span class="fs-5 fw-bold ' + monthClass + '">' + Utils.formatMoney(s.month.total_value) + '</span>' +
       '      </div>' +
       (machine.notes
@@ -159,7 +156,7 @@
         '  <td data-label="Saida anterior" class="text-end">' + Utils.formatMoney(c.previous_exit_value) + '</td>' +
         '  <td data-label="Saida atual" class="text-end">' + Utils.formatMoney(c.current_exit_value) + '</td>' +
         '  <td data-label="Saida apurada" class="text-end">' + Utils.formatMoney(c.calculated_exit_value) + '</td>' +
-        '  <td data-label="Apurado" class="text-end fw-semibold ' + totalClass + '">' +
+        '  <td data-label="Valor bruto" class="text-end fw-semibold ' + totalClass + '">' +
         Utils.formatMoney(c.calculated_total_value) + '</td>' +
         '  <td data-label="Status">' + Utils.statusBadge(c.status) + '</td>' +
         '  <td data-label="Responsavel">' + Utils.escapeHtml(c.user_name) + '</td>' +
@@ -176,7 +173,7 @@
       '    <th>Data</th>' +
       '    <th class="text-end">Ent. anterior</th><th class="text-end">Ent. atual</th><th class="text-end">Ent. apurada</th>' +
       '    <th class="text-end">Said. anterior</th><th class="text-end">Said. atual</th><th class="text-end">Said. apurada</th>' +
-      '    <th class="text-end">Apurado</th><th>Status</th><th>Responsavel</th><th></th>' +
+      '    <th class="text-end">Valor bruto</th><th>Status</th><th>Responsavel</th><th></th>' +
       '  </tr></thead>' +
       '  <tbody>' + rows + '</tbody>' +
       '</table></div>';

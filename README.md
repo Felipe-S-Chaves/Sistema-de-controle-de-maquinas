@@ -142,6 +142,67 @@ Para usar do celular na mesma rede, descubra o IP da máquina
 
 ---
 
+## Perfis de acesso
+
+Sao **dois** perfis. Cada usuario tem um deles.
+
+| | Administrador | Operador |
+|---|---|---|
+| Cadastrar proprietarios e maquinas | Sim | **Sim** |
+| Registrar coletas | Sim | **Sim** |
+| Comprovante em PDF da coleta | Sim | **Sim** (as dele) |
+| Relatorio das proprias coletas em PDF | Sim | **Sim** |
+| Dashboard e busca global | Sim | Nao |
+| Editar cadastros existentes | Sim | Nao |
+| Ver coletas de outras pessoas | Sim | Nao |
+| Relatorios e totais do negocio | Sim | Nao |
+| Cancelar coletas | Sim | Nao |
+| Auditoria e gerenciamento de usuarios | Sim | Nao |
+
+**Administrador** e o usuario criado pelo `npm run seed`, com as credenciais do
+`.env`. Tem acesso total.
+
+**Operador** e o perfil de campo. Ele nao tem dashboard: ao entrar, cai direto na
+tela de **Nova coleta**, que e o trabalho dele. Cadastra, coleta e ve o valor
+apurado das coletas que ele proprio registrou — nenhum total do negocio e nenhuma
+coleta de outra pessoa. Emite dois PDFs, ambos restritos ao proprio trabalho:
+
+- **Comprovante de coleta** — uma pagina com os dois relogios, o calculo aberto
+  e linhas de assinatura. E o recibo que ele deixa com o proprietario.
+- **Minhas coletas** — relatorio por periodo do proprio trabalho, em Relatorios.
+
+O filtro por usuario e imposto pelo backend a partir do token: forjar um
+`user_id` na URL nao muda nada (ha teste cobrindo isso).
+
+### Como um operador ganha acesso
+
+Ha dois caminhos:
+
+**1. A pessoa se cadastra sozinha.** Na tela de login existe o botao
+**"Criar conta de operador"**. Ela informa nome, e-mail e senha, e a conta e
+criada **aguardando liberacao** — ela ainda nao consegue entrar.
+
+O administrador abre **Usuarios** e ve um aviso no topo com quem esta esperando.
+Um clique em **Liberar** e a pessoa passa a ter acesso.
+
+Esse passo de aprovacao existe por um motivo: sem ele, qualquer pessoa que
+alcance o endereco do sistema criaria uma conta e passaria a ver seus
+proprietarios e maquinas.
+
+**2. O administrador cria direto.** Em **Usuarios** → *Novo usuario*, ja
+definindo o perfil e a senha inicial. A conta nasce ativa.
+
+Em ambos os casos o papel enviado na requisicao de auto-cadastro e ignorado:
+quem se cadastra pela tela de login sempre vira operador, nunca administrador.
+O sistema tambem impede que o ultimo administrador ativo seja rebaixado ou
+desativado.
+
+A tabela de permissoes fica em `backend/config/permissions.js` e e a fonte unica
+da verdade. O frontend esconde botoes com base nela, mas **quem barra de fato e
+o backend** — cada rota valida a permissao antes de executar.
+
+---
+
 ## A regra financeira
 
 Esta é a regra central do sistema e **não pode ser alterada**.
@@ -354,6 +415,7 @@ Listagens incluem `pagination` com `page`, `pageSize`, `total` e `totalPages`.
 | `GET` | `/api/collections/:id` | Detalhe com imagens |
 | `POST` | `/api/collections/:id/cancel` | Exige `reason` |
 | `GET` | `/api/collections/images/:imageId` | Imagem protegida por token |
+| `GET` | `/api/collections/:id/receipt` | Comprovante em PDF da coleta |
 
 ### Relatórios
 
@@ -363,6 +425,8 @@ Listagens incluem `pagination` com `page`, `pageSize`, `total` e `totalPages`.
 | `GET` | `/api/reports/machines` |
 | `GET` | `/api/reports/period` |
 | `GET` | `/api/reports/pdf?type=period\|owners\|machines` |
+| `GET` | `/api/reports/own` — coletas do usuario autenticado |
+| `GET` | `/api/reports/own/pdf` — o mesmo, em PDF |
 
 ### Auditoria
 
@@ -375,7 +439,7 @@ Listagens incluem `pagination` com `page`, `pageSize`, `total` e `totalPages`.
 ## Testes
 
 ```bash
-npm test              # 89 testes
+npm test              # 128 testes
 npm run test:unit     # cálculo e validações (não precisa de banco)
 npm run test:api      # API completa contra MySQL real
 npm run test:browser  # interface e responsividade em Chromium
@@ -383,7 +447,7 @@ npm run test:browser  # interface e responsividade em Chromium
 
 Detalhes em [`tests/README.md`](tests/README.md).
 
-**Cobertura:** autenticação (token inválido, expirado, forjado), CRUD e
+**Cobertura:** perfis de acesso e isolamento entre usuarios, autenticação (token inválido, expirado, forjado), CRUD e
 validações, primeira coleta, encadeamento do histórico, tentativa de forjar
 valores pelo frontend, leitura menor que a anterior, exceção justificada, foto
 obrigatória, arquivo que só finge ser imagem, cancelamento e seus bloqueios,

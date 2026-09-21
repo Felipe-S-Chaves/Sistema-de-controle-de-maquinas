@@ -61,6 +61,9 @@ const uploader = multer({
 /** Aceita ate N imagens no campo "images". */
 const uploadCollectionImages = uploader.array('images', config.uploads.maxFiles);
 
+/** Uma foto so, no campo "document_photo" - o documento do cliente. */
+const uploadOwnerDocument = uploader.single('document_photo');
+
 /** Remove arquivos ja gravados quando a transacao falha. */
 function cleanupFiles(files = []) {
   for (const file of files) {
@@ -100,4 +103,6 @@ function checksum(filePath) {
   });
 }
 
-module.exports = { uploadCollectionImages, cleanupFiles, isRealImage, checksum, ensureDir };
+module.exports = {
+  uploadCollectionImages, uploadOwnerDocument, cleanupFiles, isRealImage, checksum, ensureDir
+};

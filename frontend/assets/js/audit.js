@@ -17,7 +17,7 @@
   };
 
   var ENTITY_LABELS = {
-    collection: 'Coleta', owner: 'Proprietario', machine: 'Maquina', user: 'Usuario', auth: 'Autenticacao'
+    collection: 'Coleta', owner: 'Cliente', machine: 'Maquina', user: 'Usuario', auth: 'Autenticacao'
   };
 
   document.addEventListener('DOMContentLoaded', function () {

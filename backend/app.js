@@ -24,7 +24,9 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'"],
       fontSrc: ["'self'", 'data:'],
       imgSrc: ["'self'", 'data:', 'blob:'],
-      connectSrc: ["'self'"],
+      // O ViaCEP preenche o endereco a partir do CEP no cadastro de cliente.
+      // E o unico host externo permitido, e apenas para leitura de CEP publico.
+      connectSrc: ["'self'", 'https://viacep.com.br'],
       objectSrc: ["'none'"],
       frameAncestors: ["'self'"]
     }
@@ -90,8 +92,21 @@ const loginLimiter = rateLimit({
   message: { success: false, message: 'Muitas tentativas de login. Tente novamente em alguns minutos.', error: 'RATE_LIMITED' }
 });
 
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: config.isTest ? 100000 : 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: 'Muitos cadastros a partir deste dispositivo. Tente novamente mais tarde.',
+    error: 'RATE_LIMITED'
+  }
+});
+
 app.use('/api', apiLimiter);
 app.use('/api/auth/login', loginLimiter);
+app.use('/api/auth/register', registerLimiter);
 
 // ---- Rotas da API ----
 app.use('/api', routes);

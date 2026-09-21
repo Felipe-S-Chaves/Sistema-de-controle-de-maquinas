@@ -44,7 +44,7 @@ function errorHandler(error, req, res, next) { // eslint-disable-line no-unused-
   } else if (error && error.code === 'ER_NO_REFERENCED_ROW_2') {
     status = 422;
     code = 'INVALID_REFERENCE';
-    message = 'Referencia invalida: verifique proprietario/maquina informados.';
+    message = 'Referencia invalida: verifique cliente/maquina informados.';
   } else if (error && error.code === 'ER_ROW_IS_REFERENCED_2') {
     status = 409;
     code = 'REFERENCED_RECORD';

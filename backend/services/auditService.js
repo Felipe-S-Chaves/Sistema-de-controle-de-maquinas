@@ -1,22 +1,29 @@
 'use strict';
 
 const db = require('../config/database');
+const { exigirConta } = require('../utils/tenant');
 
 /**
  * Registra uma operacao relevante na trilha de auditoria.
  * Nunca lanca erro para o fluxo principal: uma falha de auditoria
  * e logada, mas nao impede a operacao ja validada.
  * Aceita uma conexao de transacao (conn) para gravar atomicamente.
+ *
+ * accountId nulo e reservado a eventos que acontecem FORA de qualquer conta:
+ * login que falhou, cadastro com e-mail repetido, conversoes do banco. Tudo
+ * que nasce dentro de uma conta precisa informa-la, senao some da auditoria
+ * de quem deveria ver.
  */
 async function log({
-  conn = null, userId = null, entity, entityId = null, action,
+  conn = null, accountId = null, userId = null, entity, entityId = null, action,
   oldValues = null, newValues = null, reason = null, req = null
 }) {
   const sql = `INSERT INTO audit_logs
-    (user_id, entity, entity_id, action, old_values, new_values, reason, ip_address, user_agent)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    (account_id, user_id, entity, entity_id, action, old_values, new_values, reason, ip_address, user_agent)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
   const params = [
+    accountId === null || accountId === undefined ? null : Number(accountId),
     userId,
     entity,
     entityId,
@@ -40,9 +47,9 @@ async function log({
 }
 
 /** Listagem paginada da auditoria. */
-async function list({ page = 1, pageSize = 20, entity = null, entityId = null, userId = null, from = null, to = null }) {
-  const where = [];
-  const params = [];
+async function list({ accountId, page = 1, pageSize = 20, entity = null, entityId = null, userId = null, from = null, to = null }) {
+  const where = ['a.account_id = ?'];
+  const params = [exigirConta(accountId)];
 
   if (entity) { where.push('a.entity = ?'); params.push(entity); }
   if (entityId) { where.push('a.entity_id = ?'); params.push(Number(entityId)); }
@@ -50,7 +57,7 @@ async function list({ page = 1, pageSize = 20, entity = null, entityId = null, u
   if (from) { where.push('a.created_at >= ?'); params.push(from); }
   if (to) { where.push('a.created_at <= ?'); params.push(to); }
 
-  const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+  const whereSql = `WHERE ${where.join(' AND ')}`;
   const offset = (page - 1) * pageSize;
 
   const rows = await db.query(

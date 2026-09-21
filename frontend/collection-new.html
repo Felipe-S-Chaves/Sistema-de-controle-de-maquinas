@@ -17,24 +17,24 @@
 
         <div class="mb-3">
           <h1 class="h4 mb-1">Nova coleta</h1>
-          <p class="text-muted small mb-0">Siga os passos abaixo. O valor apurado e calculado automaticamente.</p>
+          <p class="text-muted small mb-0">Siga os passos abaixo. O valor bruto e calculado automaticamente.</p>
         </div>
 
         <form id="collectionForm" novalidate>
           <div class="row g-3">
             <div class="col-12 col-xl-7">
 
-              <!-- Passo 1: proprietario -->
+              <!-- Passo 1: cliente -->
               <div class="card step-card mb-3">
                 <div class="card-body p-3">
                   <div class="d-flex align-items-center gap-2 mb-2">
                     <span class="step-badge">1</span>
-                    <label class="form-label mb-0" for="ownerSelect">Proprietario</label>
+                    <label class="form-label mb-0" for="ownerSelect">Cliente</label>
                   </div>
                   <input type="search" class="form-control mb-2" id="ownerSearch"
-                         placeholder="Digite para filtrar o proprietario..." autocomplete="off">
+                         placeholder="Digite para filtrar o cliente..." autocomplete="off">
                   <select class="form-select" id="ownerSelect" name="owner_id" size="1" required>
-                    <option value="">Selecione o proprietario</option>
+                    <option value="">Selecione o cliente</option>
                   </select>
                   <div class="invalid-feedback" data-error-for="owner_id"></div>
                 </div>
@@ -48,7 +48,7 @@
                     <label class="form-label mb-0" for="machineSelect">Maquina</label>
                   </div>
                   <select class="form-select" id="machineSelect" name="machine_id" required>
-                    <option value="">Selecione primeiro o proprietario</option>
+                    <option value="">Selecione primeiro o cliente</option>
                   </select>
                   <div class="invalid-feedback" data-error-for="machine_id"></div>
                   <div id="machineStatusHint" class="mt-2"></div>
@@ -78,27 +78,26 @@
 
                   <!-- Leitura anterior editavel: SOMENTE na primeira coleta -->
                   <div class="alert alert-info py-2 px-3 small d-none" id="firstCollectionNotice">
-                    Esta e a <strong>primeira coleta</strong> desta maquina. Informe o valor que ja estava
-                    acumulado nos relogios para que o apurado saia correto. Se os relogios estavam zerados, deixe 0.
+                    Esta e a <strong>primeira coleta</strong> desta maquina. Digite o numero que ja estava
+                    nos relogios, do mesmo jeito &mdash; so digitos, os dois ultimos sao os centavos.
+                    Se os relogios estavam zerados, deixe 0.
                   </div>
 
                   <div class="row g-3 d-none" id="firstPreviousFields">
                     <div class="col-12 col-sm-6">
                       <label class="form-label" for="previousEntry">Relogio de entrada anterior</label>
-                      <div class="input-group">
-                        <span class="input-group-text">R$</span>
-                        <input type="text" class="form-control" id="previousEntry" name="previous_entry_value"
-                               inputmode="decimal" placeholder="0,00">
-                      </div>
+                      <input type="text" class="form-control reading-input" id="previousEntry"
+                             name="previous_entry_value" inputmode="numeric" pattern="[0-9]*"
+                             autocomplete="off" maxlength="12" placeholder="0">
+                      <div class="form-text reading-echo" data-echo-for="previousEntry">R$ 0,00</div>
                       <div class="invalid-feedback" data-error-for="previous_entry_value"></div>
                     </div>
                     <div class="col-12 col-sm-6">
                       <label class="form-label" for="previousExit">Relogio de saida anterior</label>
-                      <div class="input-group">
-                        <span class="input-group-text">R$</span>
-                        <input type="text" class="form-control" id="previousExit" name="previous_exit_value"
-                               inputmode="decimal" placeholder="0,00">
-                      </div>
+                      <input type="text" class="form-control reading-input" id="previousExit"
+                             name="previous_exit_value" inputmode="numeric" pattern="[0-9]*"
+                             autocomplete="off" maxlength="12" placeholder="0">
+                      <div class="form-text reading-echo" data-echo-for="previousExit">R$ 0,00</div>
                       <div class="invalid-feedback" data-error-for="previous_exit_value"></div>
                     </div>
                     <div class="col-12"><hr class="my-1"></div>
@@ -109,12 +108,10 @@
                       <label class="form-label" for="currentEntry">
                         Novo relogio de entrada <span class="text-danger">*</span>
                       </label>
-                      <div class="input-group">
-                        <span class="input-group-text">R$</span>
-                        <input type="text" class="form-control form-control-lg" id="currentEntry"
-                               name="current_entry_value" inputmode="decimal" placeholder="0,00" required>
-                      </div>
-                      <div class="form-text">Valor acumulado inserido na maquina.</div>
+                      <input type="text" class="form-control form-control-lg reading-input" id="currentEntry"
+                             name="current_entry_value" inputmode="numeric" pattern="[0-9]*"
+                             autocomplete="off" maxlength="12" placeholder="280900" required>
+                      <div class="form-text reading-echo" data-echo-for="currentEntry">R$ 0,00</div>
                       <div class="invalid-feedback" data-error-for="current_entry_value"></div>
                     </div>
 
@@ -122,13 +119,19 @@
                       <label class="form-label" for="currentExit">
                         Novo relogio de saida <span class="text-danger">*</span>
                       </label>
-                      <div class="input-group">
-                        <span class="input-group-text">R$</span>
-                        <input type="text" class="form-control form-control-lg" id="currentExit"
-                               name="current_exit_value" inputmode="decimal" placeholder="0,00" required>
-                      </div>
-                      <div class="form-text">Valor acumulado pago pela maquina.</div>
+                      <input type="text" class="form-control form-control-lg reading-input" id="currentExit"
+                             name="current_exit_value" inputmode="numeric" pattern="[0-9]*"
+                             autocomplete="off" maxlength="12" placeholder="176597" required>
+                      <div class="form-text reading-echo" data-echo-for="currentExit">R$ 0,00</div>
                       <div class="invalid-feedback" data-error-for="current_exit_value"></div>
+                    </div>
+
+                    <div class="col-12">
+                      <p class="form-text mb-0">
+                        Digite exatamente o numero que aparece no relogio da maquina, so os digitos.
+                        Os <strong>dois ultimos digitos sao os centavos</strong>: 280900 vale R$ 2.809,00.
+                        Nao use ponto nem virgula &mdash; o sistema formata sozinho abaixo de cada campo.
+                      </p>
                     </div>
                   </div>
 
@@ -171,16 +174,31 @@
                   <div class="card-body p-3">
                     <div class="d-flex align-items-center gap-2 mb-2">
                       <span class="step-badge">6</span>
-                      <span class="form-label mb-0">Fotos / comprovantes <span class="text-danger">*</span></span>
+                      <span class="form-label mb-0">Fotos / comprovantes
+                        <span class="text-muted small fw-normal">(opcional)</span></span>
                     </div>
-                    <p class="text-muted small">Pelo menos uma foto e obrigatoria. Voce pode enviar varias.</p>
+                    <p class="text-muted small">Se quiser, anexe fotos do relogio como comprovante. Voce pode enviar varias.</p>
 
-                    <input type="file" class="d-none" id="photoInput" accept="image/jpeg,image/png,image/webp" multiple capture="environment">
-                    <div class="d-grid gap-2 d-sm-flex">
-                      <button type="button" class="btn btn-outline-primary btn-touch flex-fill" id="btnTakePhoto">
-                        <span aria-hidden="true">&#128247;</span> Adicionar foto
+                    <!--
+                      Dois campos separados de proposito:
+                      - cameraInput tem "capture", o que abre a CAMERA direto no celular;
+                      - galleryInput nao tem, entao abre a galeria e aceita varias fotos.
+                      Num campo so, o navegador ignora um dos dois comportamentos.
+                    -->
+                    <input type="file" class="d-none" id="cameraInput"
+                           accept="image/*" capture="environment">
+                    <input type="file" class="d-none" id="galleryInput"
+                           accept="image/jpeg,image/png,image/webp" multiple>
+
+                    <div class="d-grid gap-2">
+                      <button type="button" class="btn btn-primary btn-lg" id="btnTakePhoto">
+                        <span aria-hidden="true">&#128247;</span> Tirar foto agora
+                      </button>
+                      <button type="button" class="btn btn-outline-secondary btn-touch" id="btnPickPhoto">
+                        <span aria-hidden="true">&#128193;</span> Escolher da galeria
                       </button>
                     </div>
+                    <div class="form-text" id="photoHint"></div>
                     <div class="invalid-feedback" data-error-for="images"></div>
                     <div class="photo-grid mt-3" id="photoPreview"></div>
                   </div>

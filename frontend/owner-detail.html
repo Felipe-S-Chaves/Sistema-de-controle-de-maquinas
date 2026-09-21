@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Proprietario - Controle de Maquinas</title>
+  <title>Cliente - Controle de Maquinas</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link href="/assets/vendor/bootstrap/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="/assets/css/app.css">
@@ -17,13 +17,28 @@
 
         <nav aria-label="breadcrumb">
           <ol class="breadcrumb small">
-            <li class="breadcrumb-item"><a href="/owners.html">Proprietarios</a></li>
+            <li class="breadcrumb-item"><a href="/owners.html">Clientes</a></li>
             <li class="breadcrumb-item active" aria-current="page" id="crumbName">Detalhes</li>
           </ol>
         </nav>
 
         <div id="ownerContent"></div>
       </main>
+    </div>
+  </div>
+
+  <!-- Documento em tamanho maior, para conferir os dados -->
+  <div class="modal fade" id="documentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" data-document-title>Documento</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body text-center">
+          <img data-document-image alt="Documento do cliente" class="img-fluid rounded">
+        </div>
+      </div>
     </div>
   </div>
 

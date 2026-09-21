@@ -12,7 +12,9 @@
     form = document.getElementById('machineForm');
     modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('machineModal'));
 
-    document.getElementById('btnNewMachine').addEventListener('click', openCreate);
+    var btnNova = document.getElementById('btnNewMachine');
+    if (Api.can('machines.create')) btnNova.addEventListener('click', openCreate);
+    else btnNova.classList.add('d-none');
     document.getElementById('searchInput').addEventListener('input', Utils.debounce(function (e) {
       state.search = e.target.value.trim(); state.page = 1; load();
     }, 320));
@@ -43,9 +45,9 @@
         }).join('');
         document.getElementById('ownerFilter').innerHTML = '<option value="">Todos</option>' + options;
         document.getElementById('machineOwner').innerHTML =
-          '<option value="">Selecione o proprietario</option>' + options;
+          '<option value="">Selecione o cliente</option>' + options;
       })
-      .catch(function () { Utils.notify.error('Nao foi possivel carregar a lista de proprietarios.'); });
+      .catch(function () { Utils.notify.error('Nao foi possivel carregar a lista de clientes.'); });
   }
 
   function load() {
@@ -80,17 +82,25 @@
         '<tr>' +
         '  <td data-label="Maquina"><a href="/machine-detail.html?id=' + m.id + '" class="fw-semibold">' +
         Utils.escapeHtml(m.number + ' - ' + m.name) + '</a></td>' +
-        '  <td data-label="Proprietario"><a href="/owner-detail.html?id=' + m.owner_id + '">' +
+        '  <td data-label="Cliente"><a href="/owner-detail.html?id=' + m.owner_id + '">' +
         Utils.escapeHtml(m.owner_name) + '</a></td>' +
-        '  <td data-label="Modelo">' + Utils.escapeHtml(m.model || '-') + '</td>' +
         '  <td data-label="Instalacao">' + (m.installation_date ? Utils.formatDate(m.installation_date) : '-') + '</td>' +
         '  <td data-label="Status">' + Utils.statusBadge(m.status) + '</td>' +
         '  <td data-label="" class="cell-actions text-end">' +
         '    <div class="btn-group btn-group-sm">' +
+        (Api.can('collections.create')
+          ? '      <a class="btn btn-primary" href="/collection-new.html?machine_id=' + m.id + '">Coletar</a>'
+          : '') +
         '      <a class="btn btn-outline-primary" href="/machine-detail.html?id=' + m.id + '">Ver</a>' +
-        '      <button class="btn btn-outline-secondary" data-edit="' + m.id + '">Editar</button>' +
-        '      <button class="btn btn-outline-warning" data-toggle-status="' + m.id + '" data-status="' + m.status + '">' +
-        (m.status === 'active' ? 'Manutencao' : 'Ativar') + '</button>' +
+        (Api.can('machines.update')
+          ? '      <button class="btn btn-outline-secondary" data-edit="' + m.id + '">Editar</button>' +
+            '      <button class="btn btn-outline-warning" data-toggle-status="' + m.id + '" data-status="' + m.status + '">' +
+            (m.status === 'active' ? 'Manutencao' : 'Ativar') + '</button>'
+          : '') +
+        (Api.can('machines.delete')
+          ? '      <button class="btn btn-outline-danger" data-delete="' + m.id +
+            '" data-name="' + Utils.escapeHtml(m.number + ' - ' + m.name) + '">Apagar</button>'
+          : '') +
         '    </div>' +
         '  </td>' +
         '</tr>';
@@ -99,7 +109,7 @@
     container.innerHTML =
       '<div class="table-responsive-cards">' +
       '<table class="table table-hover align-middle mb-0">' +
-      '  <thead><tr><th>Maquina</th><th>Proprietario</th><th>Modelo</th>' +
+      '  <thead><tr><th>Maquina</th><th>Cliente</th>' +
       '    <th>Instalacao</th><th>Status</th><th></th></tr></thead>' +
       '  <tbody>' + rows + '</tbody>' +
       '</table></div>';
@@ -112,6 +122,28 @@
         toggleStatus(btn.getAttribute('data-toggle-status'), btn.getAttribute('data-status'));
       });
     });
+    container.querySelectorAll('[data-delete]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        apagar(btn.getAttribute('data-delete'), btn.getAttribute('data-name'));
+      });
+    });
+  }
+
+  /**
+   * Exclusao definitiva - apenas administrador.
+   * Com coletas no historico, o modal oferece manutencao como alternativa:
+   * a maquina sai de circulacao sem destruir o que ja foi apurado.
+   */
+  function apagar(id, rotulo) {
+    Deletion.run({
+      entidade: 'machine',
+      caminho: '/machines/' + id,
+      rotulo: rotulo,
+      desativar: function () {
+        return Api.patch('/machines/' + id + '/status', { status: 'maintenance' })
+          .then(function () { Utils.notify.success('Maquina em manutencao. O historico foi mantido.'); });
+      }
+    }).then(function (mudou) { if (mudou) load(); });
   }
 
   function toggleStatus(id, currentStatus) {
@@ -149,9 +181,6 @@
         form.querySelector('[name="number"]').value = m.number || '';
         form.querySelector('[name="name"]').value = m.name || '';
         form.querySelector('[name="owner_id"]').value = m.owner_id || '';
-        form.querySelector('[name="model"]').value = m.model || '';
-        form.querySelector('[name="manufacturer"]').value = m.manufacturer || '';
-        form.querySelector('[name="serial_number"]').value = m.serial_number || '';
         form.querySelector('[name="installation_date"]').value = m.installation_date || '';
         form.querySelector('[name="status"]').value = m.status || 'active';
         form.querySelector('[name="notes"]').value = m.notes || '';
@@ -173,7 +202,7 @@
     var errors = {};
     if (!data.number) errors.number = 'Informe o numero da maquina.';
     if (!data.name) errors.name = 'Informe o nome da maquina.';
-    if (!data.owner_id) errors.owner_id = 'Selecione o proprietario.';
+    if (!data.owner_id) errors.owner_id = 'Selecione o cliente.';
     if (Object.keys(errors).length) { Utils.applyFieldErrors(form, errors); return; }
 
     Utils.setButtonLoading(button, true, 'Salvando...');

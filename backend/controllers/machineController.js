@@ -2,6 +2,7 @@
 
 const asyncHandler = require('../utils/asyncHandler');
 const machineService = require('../services/machineService');
+const deletionService = require('../services/deletionService');
 const machineRepository = require('../repositories/machineRepository');
 const collectionRepository = require('../repositories/collectionRepository');
 const { ok, created, paginated } = require('../utils/response');
@@ -9,14 +10,14 @@ const { resolvePeriod } = require('../utils/datetime');
 const AppError = require('../utils/AppError');
 
 const index = asyncHandler(async (req, res) => {
-  const { items, total, page, pageSize } = await machineService.list(req.query);
+  const { items, total, page, pageSize } = await machineService.list(req.query, req.user.account_id);
   return paginated(res, items, { page, pageSize, total });
 });
 
 const show = asyncHandler(async (req, res) => {
   const period = resolvePeriod(req.query.period || 'month', req.query.start_date, req.query.end_date);
   if (!period) throw AppError.validation('Periodo invalido.', { period: 'Informe datas validas.' });
-  const machine = await machineService.getById(req.params.id, period);
+  const machine = await machineService.getById(req.params.id, period, req.user.account_id);
   return ok(res, { ...machine, period_label: period.label });
 });
 
@@ -37,9 +38,9 @@ const changeStatus = asyncHandler(async (req, res) => {
   return ok(res, machine, 'Status atualizado.');
 });
 
-/** Maquinas de um proprietario - alimenta o passo 2 da nova coleta. */
+/** Maquinas de um cliente - alimenta o passo 2 da nova coleta. */
 const byOwner = asyncHandler(async (req, res) => {
-  const items = await machineRepository.listByOwner(req.params.ownerId);
+  const items = await machineRepository.listByOwner(req.params.ownerId, req.user.account_id);
   return ok(res, items);
 });
 
@@ -50,10 +51,22 @@ const history = asyncHandler(async (req, res) => {
   if (!period) throw AppError.validation('Periodo invalido.', { period: 'Informe datas validas.' });
 
   const { items, total } = await collectionRepository.list({
+    accountId: req.user.account_id,
     page, pageSize, machineId: req.params.id, from: period.from, to: period.to,
     status: req.query.status || null, orderDir: req.query.orderDir || 'DESC'
   });
   return paginated(res, items, { page, pageSize, total });
 });
 
-module.exports = { index, show, store, update, changeStatus, byOwner, history };
+/** Exclusao definitiva da maquina. Ver a nota em ownerController.destroy. */
+const destroy = asyncHandler(async (req, res) => {
+  const resumo = await deletionService.removerMaquina({
+    id: req.params.id,
+    cascade: req.query.cascade === '1' || req.query.cascade === 'true',
+    user: req.user,
+    req
+  });
+  return ok(res, resumo, 'Maquina removida definitivamente.');
+});
+
+module.exports = { index, show, store, update, changeStatus, byOwner, history, destroy };

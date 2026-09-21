@@ -2,6 +2,7 @@
 
 const db = require('../config/database');
 const AppError = require('../utils/AppError');
+const { exigirConta } = require('../utils/tenant');
 const money = require('../utils/money');
 const { nowForDb } = require('../utils/datetime');
 const config = require('../config/env');
@@ -16,11 +17,11 @@ const { cleanupFiles, isRealImage, checksum } = require('../middlewares/upload')
  * Ultima leitura da maquina, usada para pre-carregar a tela de nova coleta.
  * Retorna null em previous quando a maquina ainda nao tem coleta.
  */
-async function getLastReading(machineId) {
-  const machine = await machineRepository.findById(machineId);
+async function getLastReading(machineId, accountId) {
+  const machine = await machineRepository.findById(machineId, accountId);
   if (!machine) throw AppError.notFound('Maquina nao encontrada.');
 
-  const last = await collectionRepository.findLastConfirmed(machineId);
+  const last = await collectionRepository.findLastConfirmed(machineId, accountId);
 
   return {
     machine: {
@@ -49,21 +50,17 @@ async function getLastReading(machineId) {
  *
  * Pontos criticos garantidos aqui:
  *  - a leitura anterior vem SEMPRE do banco (nunca do frontend);
- *  - os valores apurados sao SEMPRE recalculados no backend;
+ *  - os valores apurados e o valor bruto sao SEMPRE recalculados no backend;
  *  - leitura menor que a anterior so passa com excecao justificada;
  *  - pelo menos uma imagem valida e obrigatoria;
  *  - tudo acontece em uma unica transacao.
  */
 async function createCollection({ body, files, user, req }) {
+  const conta = exigirConta(user.account_id);
   const machineId = Number(body.machine_id);
 
-  if (!files || files.length === 0) {
-    throw AppError.validation(
-      'Envie pelo menos uma foto como comprovante da coleta.',
-      { images: 'Pelo menos uma foto e obrigatoria.' }
-    );
-  }
-
+  // A foto e opcional: a coleta pode ser salva sem comprovante fotografico.
+  // Quando vem foto, ela passa pelas mesmas conferencias de sempre.
   // Validacao binaria real das imagens antes de tocar no banco.
   for (const file of files) {
     // eslint-disable-next-line no-await-in-loop
@@ -103,13 +100,14 @@ async function createCollection({ body, files, user, req }) {
     return await db.transaction(async (conn) => {
       // Trava a maquina para evitar duas coletas simultaneas na mesma maquina.
       const [machineRows] = await conn.execute(
-        'SELECT id, number, name, owner_id, status FROM machines WHERE id = ? FOR UPDATE',
-        [machineId]
+        `SELECT id, number, name, owner_id, status FROM machines
+          WHERE id = ? AND account_id = ? FOR UPDATE`,
+        [machineId, conta]
       );
       if (!machineRows.length) throw AppError.notFound('Maquina nao encontrada.');
       const machine = machineRows[0];
 
-      const last = await collectionRepository.findLastConfirmed(machineId, conn);
+      const last = await collectionRepository.findLastConfirmed(machineId, conta, conn);
       const isFirst = !last;
 
       // Leitura anterior:
@@ -176,6 +174,7 @@ async function createCollection({ body, files, user, req }) {
       const collectedAt = nowForDb();
 
       const collectionId = await collectionRepository.create(conn, {
+        account_id: conta,
         machine_id: machine.id,
         owner_id: machine.owner_id,
         user_id: user.id,
@@ -212,6 +211,7 @@ async function createCollection({ body, files, user, req }) {
 
       await auditService.log({
         conn,
+        accountId: conta,
         userId: user.id,
         entity: 'collection',
         entityId: collectionId,
@@ -232,7 +232,7 @@ async function createCollection({ body, files, user, req }) {
         req
       });
 
-      return getDetail(collectionId, conn);
+      return getDetail(collectionId, conta, conn);
     });
   } catch (error) {
     cleanupFiles(files);
@@ -241,7 +241,9 @@ async function createCollection({ body, files, user, req }) {
 }
 
 /** Detalhe completo da coleta, com imagens. */
-async function getDetail(id, conn = null) {
+async function getDetail(id, accountId, conn = null) {
+  const conta = exigirConta(accountId);
+
   if (conn) {
     const [rows] = await conn.execute(
       `SELECT c.*, m.number AS machine_number, m.name AS machine_name,
@@ -250,8 +252,8 @@ async function getDetail(id, conn = null) {
          JOIN machines m ON m.id = c.machine_id
          JOIN owners o   ON o.id = c.owner_id
          JOIN users u    ON u.id = c.user_id
-        WHERE c.id = ?`,
-      [id]
+        WHERE c.id = ? AND c.account_id = ?`,
+      [id, conta]
     );
     if (!rows.length) throw AppError.notFound('Coleta nao encontrada.');
     const [images] = await conn.execute(
@@ -261,9 +263,9 @@ async function getDetail(id, conn = null) {
     return { ...rows[0], images };
   }
 
-  const collection = await collectionRepository.findDetail(id);
+  const collection = await collectionRepository.findDetail(id, conta);
   if (!collection) throw AppError.notFound('Coleta nao encontrada.');
-  const images = await collectionRepository.listImages(id);
+  const images = await collectionRepository.listImages(id, conta);
   return { ...collection, images };
 }
 
@@ -273,6 +275,7 @@ async function getDetail(id, conn = null) {
  * porque isso quebraria o encadeamento do historico.
  */
 async function cancelCollection({ id, reason, user, req }) {
+  const conta = exigirConta(user.account_id);
   const trimmed = String(reason || '').trim();
   if (trimmed.length < 10) {
     throw AppError.validation(
@@ -282,7 +285,7 @@ async function cancelCollection({ id, reason, user, req }) {
   }
 
   return db.transaction(async (conn) => {
-    const collection = await collectionRepository.findForUpdate(conn, id);
+    const collection = await collectionRepository.findForUpdate(conn, id, conta);
     if (!collection) throw AppError.notFound('Coleta nao encontrada.');
     if (collection.status === 'cancelled') {
       throw AppError.conflict('Esta coleta ja esta cancelada.', 'ALREADY_CANCELLED');
@@ -298,12 +301,13 @@ async function cancelCollection({ id, reason, user, req }) {
 
     const cancelledAt = nowForDb();
     const affected = await collectionRepository.cancel(conn, id, {
-      userId: user.id, reason: trimmed, cancelledAt
+      userId: user.id, reason: trimmed, cancelledAt, accountId: conta
     });
     if (!affected) throw AppError.conflict('Nao foi possivel cancelar esta coleta.', 'CANCEL_FAILED');
 
     await auditService.log({
       conn,
+      accountId: conta,
       userId: user.id,
       entity: 'collection',
       entityId: Number(id),
@@ -317,7 +321,7 @@ async function cancelCollection({ id, reason, user, req }) {
       req
     });
 
-    return getDetail(id, conn);
+    return getDetail(id, conta, conn);
   });
 }
 

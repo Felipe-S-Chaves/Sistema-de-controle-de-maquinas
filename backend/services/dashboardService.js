@@ -2,27 +2,35 @@
 
 const db = require('../config/database');
 const collectionRepository = require('../repositories/collectionRepository');
+const { exigirConta } = require('../utils/tenant');
 
 /**
  * Metricas do dashboard.
  * Totais financeiros consideram SOMENTE coletas confirmadas.
  */
-async function getMetrics(period) {
+async function getMetrics(period, accountId) {
+  const conta = exigirConta(accountId);
+
   const owners = await db.queryOne(
-    `SELECT COUNT(*) AS total, SUM(status = 'active') AS active FROM owners`
+    `SELECT COUNT(*) AS total, SUM(status = 'active') AS active
+       FROM owners WHERE account_id = ?`,
+    [conta]
   );
 
   const machines = await db.queryOne(
     `SELECT COUNT(*) AS total,
             SUM(status = 'active') AS active,
             SUM(status = 'maintenance') AS maintenance
-       FROM machines`
+       FROM machines WHERE account_id = ?`,
+    [conta]
   );
 
-  const totals = await collectionRepository.totals({ from: period.from, to: period.to });
+  const totals = await collectionRepository.totals({
+    accountId: conta, from: period.from, to: period.to
+  });
 
-  const params = [];
-  let periodSql = "WHERE c.status = 'confirmed'";
+  const params = [conta];
+  let periodSql = "WHERE c.account_id = ? AND c.status = 'confirmed'";
   if (period.from) { periodSql += ' AND c.collected_at >= ?'; params.push(period.from); }
   if (period.to) { periodSql += ' AND c.collected_at <= ?'; params.push(period.to); }
 
@@ -48,7 +56,7 @@ async function getMetrics(period) {
 }
 
 /** Ultimas coletas para o painel inicial. */
-async function getLatestCollections(limit = 8) {
+async function getLatestCollections(accountId, limit = 8) {
   return db.query(
     `SELECT c.id, c.collected_at, c.current_entry_value, c.current_exit_value,
             c.calculated_entry_value, c.calculated_exit_value, c.calculated_total_value, c.status,
@@ -57,36 +65,38 @@ async function getLatestCollections(limit = 8) {
        FROM collections c
        JOIN machines m ON m.id = c.machine_id
        JOIN owners o   ON o.id = c.owner_id
+      WHERE c.account_id = ?
       ORDER BY c.collected_at DESC, c.id DESC
       LIMIT ?`,
-    [String(limit)]
+    [exigirConta(accountId), String(limit)]
   );
 }
 
-async function getMonthlySeries(months = 6) {
-  return collectionRepository.monthlySeries(months);
+async function getMonthlySeries(accountId, months = 6) {
+  return collectionRepository.monthlySeries(accountId, months);
 }
 
-/** Busca global: proprietarios + maquinas, com o tipo identificado. */
-async function globalSearch(term, limit = 10) {
+/** Busca global: clientes + maquinas, com o tipo identificado. */
+async function globalSearch(term, accountId, limit = 10) {
+  const conta = exigirConta(accountId);
   const like = `%${term}%`;
   const digits = term.replace(/\D/g, '');
 
   const owners = await db.query(
     `SELECT id, name, document, document_type, status
        FROM owners
-      WHERE name LIKE ? OR document LIKE ?
+      WHERE account_id = ? AND (name LIKE ? OR document LIKE ?)
       ORDER BY name ASC LIMIT ?`,
-    [like, digits ? `%${digits}%` : like, String(limit)]
+    [conta, like, digits ? `%${digits}%` : like, String(limit)]
   );
 
   const machines = await db.query(
     `SELECT m.id, m.number, m.name, m.status, m.owner_id, o.name AS owner_name
        FROM machines m
        JOIN owners o ON o.id = m.owner_id
-      WHERE m.number LIKE ? OR m.name LIKE ?
+      WHERE m.account_id = ? AND (m.number LIKE ? OR m.name LIKE ?)
       ORDER BY m.number ASC LIMIT ?`,
-    [like, like, String(limit)]
+    [conta, like, like, String(limit)]
   );
 
   return {

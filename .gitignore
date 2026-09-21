@@ -1,8 +1,60 @@
+# ---------------------------------------------------------------------
+# Dependencias
+# ---------------------------------------------------------------------
 node_modules/
+
+# ---------------------------------------------------------------------
+# Segredos
+#
+# O .env guarda senha do banco, segredo do JWT e a senha do administrador.
+# O padrao abaixo cobre TODAS as variacoes (.env.bak, .env.local, .env.producao,
+# .env.old...), porque a copia de seguranca que alguem faz as pressas costuma
+# ser justamente a que escapa. O .env.example, que so tem valores de exemplo,
+# fica de fora da regra e continua versionado.
+# ---------------------------------------------------------------------
 .env
+.env.*
+!.env.example
+
+# ---------------------------------------------------------------------
+# Dados reais de clientes
+#
+# Aqui ficam as fotos de documento dos clientes e os comprovantes de coleta.
+# Sao dados pessoais: nunca vao para o repositorio, nem em repositorio privado.
+# ---------------------------------------------------------------------
 backend/uploads/*
 !backend/uploads/.gitkeep
+
+# ---------------------------------------------------------------------
+# Copias e despejos de banco
+# ---------------------------------------------------------------------
+*.sql.gz
+*.dump
+*.bak
+backup/
+backups/
+dump*.sql
+*-backup.sql
+*_backup.sql
+
+# ---------------------------------------------------------------------
+# Logs e temporarios
+# ---------------------------------------------------------------------
 *.log
-.DS_Store
-coverage/
+npm-debug.log*
+logs/
+nohup.out
 tmp/
+temp/
+coverage/
+.nyc_output/
+
+# ---------------------------------------------------------------------
+# Sistema operacional e editores
+# ---------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.swp

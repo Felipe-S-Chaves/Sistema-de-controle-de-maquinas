@@ -5,10 +5,12 @@ const fs = require('fs');
 const asyncHandler = require('../utils/asyncHandler');
 const collectionService = require('../services/collectionService');
 const collectionRepository = require('../repositories/collectionRepository');
+const pdfService = require('../services/pdfService');
 const config = require('../config/env');
 const { ok, created, paginated } = require('../utils/response');
 const { resolvePeriod } = require('../utils/datetime');
 const AppError = require('../utils/AppError');
+const { pode } = require('../config/permissions');
 
 const index = asyncHandler(async (req, res) => {
   const page = Math.max(1, parseInt(req.query.page, 10) || 1);
@@ -18,12 +20,19 @@ const index = asyncHandler(async (req, res) => {
 
   const status = ['confirmed', 'cancelled'].includes(req.query.status) ? req.query.status : null;
 
+  // Quem nao pode ver todas as coletas enxerga apenas as que registrou.
+  const userId = pode(req.user.role, 'collections.viewAll')
+    ? (parseInt(req.query.user_id, 10) || null)
+    : req.user.id;
+
   const { items, total } = await collectionRepository.list({
+    accountId: req.user.account_id,
     page,
     pageSize,
     machineId: parseInt(req.query.machine_id, 10) || null,
     ownerId: parseInt(req.query.owner_id, 10) || null,
     status,
+    userId,
     from: period.from,
     to: period.to,
     orderDir: req.query.orderDir || 'DESC'
@@ -32,13 +41,18 @@ const index = asyncHandler(async (req, res) => {
 });
 
 const show = asyncHandler(async (req, res) => {
-  const collection = await collectionService.getDetail(req.params.id);
+  const collection = await collectionService.getDetail(req.params.id, req.user.account_id);
+
+  if (!pode(req.user.role, 'collections.viewAll') && collection.user_id !== req.user.id) {
+    throw AppError.forbidden('Voce so pode ver as coletas que registrou.');
+  }
+
   return ok(res, collection);
 });
 
 /** Ultima leitura da maquina (passo 3 do fluxo de coleta). */
 const lastReading = asyncHandler(async (req, res) => {
-  const data = await collectionService.getLastReading(req.params.machineId);
+  const data = await collectionService.getLastReading(req.params.machineId, req.user.account_id);
   return ok(res, data);
 });
 
@@ -58,8 +72,14 @@ const cancel = asyncHandler(async (req, res) => {
 
 /** Serve a imagem apenas para usuarios autenticados. */
 const image = asyncHandler(async (req, res) => {
-  const record = await collectionRepository.findImageById(req.params.imageId);
+  // A busca ja e filtrada pela conta: uma imagem da outra conta simplesmente
+  // nao existe daqui.
+  const record = await collectionRepository.findImageById(req.params.imageId, req.user.account_id);
   if (!record) throw AppError.notFound('Imagem nao encontrada.');
+
+  if (!pode(req.user.role, 'collections.viewAll') && record.collection_user_id !== req.user.id) {
+    throw AppError.forbidden('Voce so pode ver os comprovantes das coletas que registrou.');
+  }
 
   const absolute = path.resolve(config.uploads.dir, record.file_path);
   const uploadsRoot = path.resolve(config.uploads.dir);
@@ -78,4 +98,27 @@ const image = asyncHandler(async (req, res) => {
   return res.sendFile(absolute);
 });
 
-module.exports = { index, show, lastReading, store, cancel, image };
+/**
+ * Comprovante em PDF de uma coleta.
+ * O operador so emite o das coletas que ele proprio registrou.
+ */
+const receipt = asyncHandler(async (req, res) => {
+  const collection = await collectionService.getDetail(req.params.id, req.user.account_id);
+
+  if (!pode(req.user.role, 'collections.viewAll') && collection.user_id !== req.user.id) {
+    throw AppError.forbidden('Voce so pode emitir o comprovante das coletas que registrou.');
+  }
+
+  const buffer = await pdfService.generateCollectionReceiptPdf(collection);
+  const nome = `comprovante-coleta-${String(collection.id).padStart(6, '0')}.pdf`;
+
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Length', buffer.length);
+  res.setHeader(
+    'Content-Disposition',
+    `${req.query.inline === '1' ? 'inline' : 'attachment'}; filename="${nome}"`
+  );
+  return res.end(buffer);
+});
+
+module.exports = { index, show, lastReading, store, cancel, image, receipt };

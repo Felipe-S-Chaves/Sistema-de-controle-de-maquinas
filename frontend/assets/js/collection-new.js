@@ -1,7 +1,7 @@
 /**
  * Nova coleta - fluxo otimizado para uso em celular no local da maquina.
  *
- * PROPRIETARIO -> MAQUINA -> ULTIMA LEITURA -> NOVA ENTRADA -> NOVA SAIDA
+ * CLIENTE -> MAQUINA -> ULTIMA LEITURA -> NOVA ENTRADA -> NOVA SAIDA
  * -> CALCULO -> FOTO -> OBSERVACAO -> SALVAR
  *
  * O calculo aqui e apenas feedback imediato. O backend recalcula tudo
@@ -41,7 +41,7 @@
   });
 
   // ------------------------------------------------------------------
-  // Passo 1: proprietario
+  // Passo 1: cliente
   // ------------------------------------------------------------------
   function loadOwners() {
     return Api.get('/owners', { pageSize: 100, status: 'active' })
@@ -63,7 +63,7 @@
         return '<option value="' + o.id + '">' + Utils.escapeHtml(o.name) + '</option>';
       }).join('');
 
-    select.innerHTML = '<option value="">Selecione o proprietario</option>' + options;
+    select.innerHTML = '<option value="">Selecione o cliente</option>' + options;
     if (current) select.value = current;
   }
 
@@ -95,8 +95,8 @@
       .then(function (payload) {
         var machines = payload.data;
         if (!machines.length) {
-          select.innerHTML = '<option value="">Este proprietario nao possui maquinas</option>';
-          Utils.notify.warning('Este proprietario ainda nao possui maquinas cadastradas.');
+          select.innerHTML = '<option value="">Este cliente nao possui maquinas</option>';
+          Utils.notify.warning('Este cliente ainda nao possui maquinas cadastradas.');
           return;
         }
         select.innerHTML = '<option value="">Selecione a maquina</option>' +
@@ -171,19 +171,26 @@
           firstFields.classList.remove('d-none');
           document.getElementById('previousEntry').value = '';
           document.getElementById('previousExit').value = '';
+          atualizarEco('previousEntry');
+          atualizarEco('previousExit');
         } else {
           state.previousEntryCents = Utils.toCents(data.last_collection.entry_value) || 0;
           state.previousExitCents = Utils.toCents(data.last_collection.exit_value) || 0;
 
+          // O numero cru vem primeiro: e ele que o operador compara com o
+          // visor da maquina, parado na frente dela. O valor em reais fica
+          // logo abaixo, para conferencia.
           box.innerHTML =
             '<div class="row g-2">' +
             '  <div class="col-6"><div class="reading-box">' +
             '    <div class="reading-label">Entrada</div>' +
-            '    <div class="reading-value">' + Utils.formatMoney(data.last_collection.entry_value) + '</div>' +
+            '    <div class="reading-value">' + Utils.centsToReading(state.previousEntryCents) + '</div>' +
+            '    <div class="small text-muted">' + Utils.centsToMoney(state.previousEntryCents) + '</div>' +
             '  </div></div>' +
             '  <div class="col-6"><div class="reading-box">' +
             '    <div class="reading-label">Saida</div>' +
-            '    <div class="reading-value">' + Utils.formatMoney(data.last_collection.exit_value) + '</div>' +
+            '    <div class="reading-value">' + Utils.centsToReading(state.previousExitCents) + '</div>' +
+            '    <div class="small text-muted">' + Utils.centsToMoney(state.previousExitCents) + '</div>' +
             '  </div></div>' +
             '  <div class="col-12"><p class="text-muted small mb-0 mt-1">' +
             'Ultima coleta em ' + Utils.formatDateTime(data.last_collection.collected_at) +
@@ -218,8 +225,7 @@
     document.getElementById('lastReadingBox').innerHTML =
       '<p class="text-muted small mb-0">Selecione uma maquina para ver a ultima leitura.</p>';
     document.getElementById('machineStatusHint').innerHTML = '';
-    document.getElementById('currentEntry').value = '';
-    document.getElementById('currentExit').value = '';
+    limparLeituras();
     document.getElementById('exceptionBox').classList.add('d-none');
     document.getElementById('confirmException').checked = false;
     document.getElementById('exceptionReason').value = '';
@@ -229,16 +235,29 @@
   // ------------------------------------------------------------------
   // Passos 4 e 5: nova leitura + calculo em tempo real
   // ------------------------------------------------------------------
+  /**
+   * Os relogios sao digitados como aparecem na maquina: so digitos.
+   *
+   * Qualquer caractere que nao seja numero e removido na hora, entao nao ha
+   * como o operador inventar um ponto ou uma virgula e receber um valor cem
+   * vezes menor. Abaixo de cada campo, o mesmo numero aparece em reais - e a
+   * conferencia que ele faz antes de salvar.
+   */
   function bindReadingInputs() {
     ['currentEntry', 'currentExit', 'previousEntry', 'previousExit'].forEach(function (id) {
       var input = document.getElementById(id);
+
       input.addEventListener('input', function () {
+        var limpo = Utils.readingDigits(input.value);
+        if (input.value !== limpo) {
+          // Mantem o cursor no fim: quem digita rapido no celular nao pode
+          // ver o cursor pular para o comeco a cada caractere recusado.
+          input.value = limpo;
+          try { input.setSelectionRange(limpo.length, limpo.length); } catch (e) { /* noop */ }
+        }
         input.classList.remove('is-invalid');
+        atualizarEco(id);
         renderCalculation();
-      });
-      input.addEventListener('blur', function () {
-        var cents = Utils.toCents(input.value);
-        if (cents !== null) input.value = (cents / 100).toFixed(2).replace('.', ',');
       });
     });
 
@@ -246,13 +265,29 @@
     document.getElementById('exceptionReason').addEventListener('input', renderCalculation);
   }
 
+  /** Espelha o campo em reais, logo abaixo dele. */
+  function atualizarEco(id) {
+    var eco = document.querySelector('[data-echo-for="' + id + '"]');
+    if (!eco) return;
+    var cents = Utils.readingToCents(document.getElementById(id).value);
+    eco.textContent = Utils.centsToMoney(cents || 0);
+    eco.classList.toggle('text-muted', cents === null);
+  }
+
+  function limparLeituras() {
+    ['currentEntry', 'currentExit', 'previousEntry', 'previousExit'].forEach(function (id) {
+      var campo = document.getElementById(id);
+      if (campo) { campo.value = ''; atualizarEco(id); }
+    });
+  }
+
   function currentPreviousCents() {
     if (!state.isFirstCollection) {
       return { entry: state.previousEntryCents, exit: state.previousExitCents };
     }
     return {
-      entry: Utils.toCents(document.getElementById('previousEntry').value) || 0,
-      exit: Utils.toCents(document.getElementById('previousExit').value) || 0
+      entry: Utils.readingToCents(document.getElementById('previousEntry').value) || 0,
+      exit: Utils.readingToCents(document.getElementById('previousExit').value) || 0
     };
   }
 
@@ -260,12 +295,17 @@
    * Regra financeira (espelho do backend, apenas para feedback):
    *   entrada apurada = entrada atual - entrada anterior
    *   saida apurada   = saida atual   - saida anterior
-   *   apurado         = entrada apurada - saida apurada
+   *   VALOR BRUTO     = entrada apurada - saida apurada
+   *
+   * As duas apuracoes mostram a conta em digitos, do jeito que os numeros
+   * estao no visor da maquina. O valor bruto ja trabalha com os resultados
+   * delas, entao ali a conta aparece em reais. O servidor recalcula tudo
+   * antes de gravar.
    */
   function renderCalculation() {
     var box = document.getElementById('calculationBox');
-    var entryCents = Utils.toCents(document.getElementById('currentEntry').value);
-    var exitCents = Utils.toCents(document.getElementById('currentExit').value);
+    var entryCents = Utils.readingToCents(document.getElementById('currentEntry').value);
+    var exitCents = Utils.readingToCents(document.getElementById('currentExit').value);
     var previous = currentPreviousCents();
 
     var hasBoth = entryCents !== null && exitCents !== null;
@@ -273,7 +313,7 @@
     if (!state.machineId || !hasBoth) {
       box.innerHTML =
         '<div class="result-box">' +
-        '  <div class="result-line">Valor apurado</div>' +
+        '  <div class="result-line">Valor bruto</div>' +
         '  <div class="result-value">R$ 0,00</div>' +
         '  <div class="result-line mt-2">Informe os dois relogios para ver o calculo.</div>' +
         '</div>';
@@ -286,27 +326,29 @@
     var calcExit = exitCents - previous.exit;
     var total = calcEntry - calcExit;
 
+    // "285000 - 280900" - a conta escrita como o operador a faria no papel.
+    var conta = function (a, b) {
+      return Utils.centsToReading(a) + ' &minus; ' + Utils.centsToReading(b);
+    };
+
     box.innerHTML =
       '<div class="row g-2 mb-3">' +
       '  <div class="col-6"><div class="reading-box">' +
       '    <div class="reading-label">Entrada apurada</div>' +
       '    <div class="reading-value">' + Utils.centsToMoney(calcEntry) + '</div>' +
-      '    <div class="small text-muted">' + Utils.centsToMoney(entryCents) + ' &minus; ' +
-      Utils.centsToMoney(previous.entry) + '</div>' +
+      '    <div class="small text-muted">' + conta(entryCents, previous.entry) + '</div>' +
       '  </div></div>' +
       '  <div class="col-6"><div class="reading-box">' +
       '    <div class="reading-label">Saida apurada</div>' +
       '    <div class="reading-value">' + Utils.centsToMoney(calcExit) + '</div>' +
-      '    <div class="small text-muted">' + Utils.centsToMoney(exitCents) + ' &minus; ' +
-      Utils.centsToMoney(previous.exit) + '</div>' +
+      '    <div class="small text-muted">' + conta(exitCents, previous.exit) + '</div>' +
       '  </div></div>' +
       '</div>' +
       '<div class="result-box">' +
-      '  <div class="result-line">Valor apurado</div>' +
+      '  <div class="result-line">Valor bruto</div>' +
       '  <div class="result-value">' + Utils.centsToMoney(total) + '</div>' +
       '  <div class="result-line mt-2">' +
-      Utils.centsToMoney(calcEntry) + ' &minus; ' + Utils.centsToMoney(calcExit) +
-      '  </div>' +
+      Utils.centsToMoney(calcEntry) + ' &minus; ' + Utils.centsToMoney(calcExit) + '</div>' +
       '</div>' +
       '<p class="text-muted small mb-0 mt-2">O servidor recalcula estes valores antes de salvar.</p>';
 
@@ -317,7 +359,9 @@
       (document.getElementById('confirmException').checked &&
         document.getElementById('exceptionReason').value.trim().length >= 10);
 
-    updateSaveButton(state.photos.length > 0 && exceptionOk);
+    // A foto e opcional: o que ainda trava o salvar e uma excecao de leitura
+    // sem motivo informado.
+    updateSaveButton(exceptionOk);
   }
 
   function updateExceptionBox(calcEntry, calcExit) {
@@ -343,30 +387,85 @@
   // ------------------------------------------------------------------
   // Passo 6: fotos
   // ------------------------------------------------------------------
-  function bindPhotos() {
-    var input = document.getElementById('photoInput');
-    document.getElementById('btnTakePhoto').addEventListener('click', function () { input.click(); });
+  var MAX_FOTOS = 8;
+  var LADO_MAXIMO = 1600;   // px - suficiente para ler o visor do relogio
+  var QUALIDADE = 0.82;
 
-    input.addEventListener('change', function () {
-      var maxBytes = 8 * 1024 * 1024;
-      Array.prototype.forEach.call(input.files, function (file) {
-        if (state.photos.length >= 8) {
-          Utils.notify.warning('Limite de 8 fotos por coleta.');
-          return;
-        }
-        if (file.size > maxBytes) {
-          Utils.notify.error('"' + file.name + '" tem mais de 8 MB e nao foi adicionada.');
-          return;
-        }
-        if (['image/jpeg', 'image/png', 'image/webp'].indexOf(file.type) === -1) {
-          Utils.notify.error('"' + file.name + '" nao e um formato de imagem aceito (JPG, PNG ou WEBP).');
-          return;
-        }
-        state.photos.push({ file: file, url: URL.createObjectURL(file) });
+  /** A compressao vive em Utils: a tela de cliente usa a mesma. */
+  function comprimirImagem(file) {
+    return Utils.comprimirImagem(file, { ladoMaximo: LADO_MAXIMO, qualidade: QUALIDADE });
+  }
+
+  function tamanhoLegivel(bytes) {
+    if (bytes >= 1024 * 1024) return (bytes / 1024 / 1024).toFixed(1).replace('.', ',') + ' MB';
+    return Math.round(bytes / 1024) + ' KB';
+  }
+
+  async function adicionarArquivos(lista) {
+    var hint = document.getElementById('photoHint');
+    var aceitos = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
+    var arquivos = Array.prototype.slice.call(lista);
+    if (!arquivos.length) return;
+
+    hint.className = 'form-text text-muted';
+    hint.textContent = 'Preparando ' + arquivos.length + ' foto(s)...';
+
+    for (var i = 0; i < arquivos.length; i += 1) {
+      var file = arquivos[i];
+
+      if (state.photos.length >= MAX_FOTOS) {
+        Utils.notify.warning('Limite de ' + MAX_FOTOS + ' fotos por coleta.');
+        break;
+      }
+      // Alguns Android reportam type vazio em foto da camera: aceitamos pela extensao.
+      var tipoOk = !file.type || aceitos.indexOf(file.type) !== -1 || /^image\//.test(file.type);
+      if (!tipoOk) {
+        Utils.notify.error('"' + file.name + '" nao e uma imagem.');
+        continue;
+      }
+
+      var original = file.size;
+      // eslint-disable-next-line no-await-in-loop
+      var pronta = await comprimirImagem(file);
+
+      if (pronta.size > 8 * 1024 * 1024) {
+        Utils.notify.error('"' + file.name + '" continua acima de 8 MB e nao foi adicionada.');
+        continue;
+      }
+
+      state.photos.push({
+        file: pronta,
+        url: URL.createObjectURL(pronta),
+        original: original,
+        final: pronta.size
       });
-      input.value = '';
-      renderPhotos();
-      renderCalculation();
+    }
+
+    var total = state.photos.reduce(function (soma, p) { return soma + p.final; }, 0);
+    hint.className = 'form-text text-muted';
+    hint.textContent = state.photos.length
+      ? state.photos.length + ' foto(s) - ' + tamanhoLegivel(total) + ' para enviar'
+      : '';
+
+    renderPhotos();
+    renderCalculation();
+  }
+
+  function bindPhotos() {
+    var camera = document.getElementById('cameraInput');
+    var galeria = document.getElementById('galleryInput');
+
+    document.getElementById('btnTakePhoto').addEventListener('click', function () { camera.click(); });
+    document.getElementById('btnPickPhoto').addEventListener('click', function () { galeria.click(); });
+
+    [camera, galeria].forEach(function (input) {
+      input.addEventListener('change', function () {
+        // input.files e uma lista VIVA: limpar o value esvazia a lista.
+        // Por isso copiamos os arquivos para um array antes de limpar.
+        var arquivos = Array.prototype.slice.call(input.files);
+        input.value = '';   // permite tirar outra foto igual em seguida
+        adicionarArquivos(arquivos);
+      });
     });
   }
 
@@ -401,15 +500,14 @@
     Utils.clearFieldErrors(form);
 
     var errors = {};
-    if (!document.getElementById('ownerSelect').value) errors.owner_id = 'Selecione o proprietario.';
+    if (!document.getElementById('ownerSelect').value) errors.owner_id = 'Selecione o cliente.';
     if (!state.machineId) errors.machine_id = 'Selecione a maquina.';
-    if (Utils.toCents(document.getElementById('currentEntry').value) === null) {
+    if (Utils.readingToCents(document.getElementById('currentEntry').value) === null) {
       errors.current_entry_value = 'Informe o novo relogio de entrada.';
     }
-    if (Utils.toCents(document.getElementById('currentExit').value) === null) {
+    if (Utils.readingToCents(document.getElementById('currentExit').value) === null) {
       errors.current_exit_value = 'Informe o novo relogio de saida.';
     }
-    if (!state.photos.length) errors.images = 'Adicione pelo menos uma foto.';
 
     if (Object.keys(errors).length) {
       Utils.applyFieldErrors(form, errors);
@@ -422,12 +520,17 @@
 
     var data = new FormData();
     data.append('machine_id', state.machineId);
-    data.append('current_entry_value', String(Utils.toCents(document.getElementById('currentEntry').value) / 100));
-    data.append('current_exit_value', String(Utils.toCents(document.getElementById('currentExit').value) / 100));
+    // Os digitos do visor viram reais inteiros: 280900 vai como "280900.00".
+    var leitura = function (id) {
+      return String((Utils.readingToCents(document.getElementById(id).value) || 0) / 100);
+    };
+
+    data.append('current_entry_value', leitura('currentEntry'));
+    data.append('current_exit_value', leitura('currentExit'));
 
     if (state.isFirstCollection) {
-      data.append('previous_entry_value', String((Utils.toCents(document.getElementById('previousEntry').value) || 0) / 100));
-      data.append('previous_exit_value', String((Utils.toCents(document.getElementById('previousExit').value) || 0) / 100));
+      data.append('previous_entry_value', leitura('previousEntry'));
+      data.append('previous_exit_value', leitura('previousExit'));
     }
 
     if (document.getElementById('confirmException').checked) {

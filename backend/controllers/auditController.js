@@ -14,6 +14,7 @@ const index = asyncHandler(async (req, res) => {
   if (!period) throw AppError.validation('Periodo invalido.', { period: 'Informe datas validas.' });
 
   const { items, total } = await auditService.list({
+    accountId: req.user.account_id,
     page,
     pageSize,
     entity: req.query.entity || null,

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Proprietarios - Controle de Maquinas</title>
+  <title>Clientes - Controle de Maquinas</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link href="/assets/vendor/bootstrap/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="/assets/css/app.css">
@@ -16,9 +16,9 @@
       <main class="app-main" id="appMain">
 
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-          <h1 class="h4 mb-0">Proprietarios</h1>
+          <h1 class="h4 mb-0">Clientes</h1>
           <button class="btn btn-primary btn-touch" id="btnNewOwner">
-            <span aria-hidden="true">&#10133;</span> Novo proprietario
+            <span aria-hidden="true">&#10133;</span> Novo cliente
           </button>
         </div>
 
@@ -54,7 +54,7 @@
           <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
             <form class="modal-content" id="ownerForm" novalidate>
               <div class="modal-header">
-                <h5 class="modal-title" id="ownerModalTitle">Novo proprietario</h5>
+                <h5 class="modal-title" id="ownerModalTitle">Novo cliente</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
               </div>
               <div class="modal-body">
@@ -72,7 +72,7 @@
                     <div class="invalid-feedback" data-error-for="document"></div>
                   </div>
                   <div class="col-12 col-md-6">
-                    <label class="form-label" for="ownerEmail">E-mail</label>
+                    <label class="form-label" for="ownerEmail">E-mail <span class="text-muted fw-normal">(opcional)</span></label>
                     <input type="email" class="form-control" id="ownerEmail" name="email" maxlength="190">
                     <div class="invalid-feedback" data-error-for="email"></div>
                   </div>
@@ -86,9 +86,17 @@
                     <input type="tel" class="form-control" id="ownerWhatsapp" name="whatsapp" inputmode="tel" maxlength="20">
                     <div class="invalid-feedback" data-error-for="whatsapp"></div>
                   </div>
+                  <div class="col-12 col-md-5">
+                    <label class="form-label" for="ownerZip">CEP</label>
+                    <input type="text" class="form-control" id="ownerZip" name="zip_code"
+                           inputmode="numeric" maxlength="9" placeholder="00000-000" autocomplete="postal-code">
+                    <div class="form-text" id="cepFeedback">Digite o CEP para preencher o endereco.</div>
+                    <div class="invalid-feedback" data-error-for="zip_code"></div>
+                  </div>
                   <div class="col-12">
                     <label class="form-label" for="ownerAddress">Endereco</label>
-                    <input type="text" class="form-control" id="ownerAddress" name="address" maxlength="255">
+                    <input type="text" class="form-control" id="ownerAddress" name="address"
+                           maxlength="255" autocomplete="street-address">
                     <div class="invalid-feedback" data-error-for="address"></div>
                   </div>
                   <div class="col-12 col-md-5">
@@ -101,11 +109,30 @@
                     <input type="text" class="form-control text-uppercase" id="ownerState" name="state" maxlength="2">
                     <div class="invalid-feedback" data-error-for="state"></div>
                   </div>
-                  <div class="col-6 col-md-4">
-                    <label class="form-label" for="ownerZip">CEP</label>
-                    <input type="text" class="form-control" id="ownerZip" name="zip_code" inputmode="numeric" maxlength="9">
-                    <div class="invalid-feedback" data-error-for="zip_code"></div>
+                  <!-- Foto do documento: obrigatoria no cadastro, no celular
+                       abre a camera direto para fotografar o documento. -->
+                  <div class="col-12">
+                    <label class="form-label" for="ownerDocPhoto">
+                      Foto do documento <span class="text-danger" id="docPhotoRequired">*</span>
+                    </label>
+                    <input type="file" class="d-none" id="ownerDocCamera"
+                           accept="image/*" capture="environment">
+                    <input type="file" class="d-none" id="ownerDocGallery" accept="image/*">
+                    <div class="d-grid gap-2 d-sm-flex">
+                      <button type="button" class="btn btn-primary btn-touch flex-fill" id="btnDocCamera">
+                        <span aria-hidden="true">&#128247;</span> Tirar foto agora
+                      </button>
+                      <button type="button" class="btn btn-outline-secondary btn-touch flex-fill" id="btnDocGallery">
+                        <span aria-hidden="true">&#128193;</span> Escolher da galeria
+                      </button>
+                    </div>
+                    <div class="form-text" id="docPhotoHint">
+                      Anexe uma foto legivel do documento do cliente.
+                    </div>
+                    <div class="mt-2" id="docPhotoPreview"></div>
+                    <div class="invalid-feedback d-block" data-error-for="document_photo"></div>
                   </div>
+
                   <div class="col-12">
                     <label class="form-label" for="ownerNotes">Observacoes</label>
                     <textarea class="form-control" id="ownerNotes" name="notes" rows="3" maxlength="5000"></textarea>
@@ -136,6 +163,7 @@
   <script src="/assets/js/api.js"></script>
   <script src="/assets/js/utils.js"></script>
   <script src="/assets/js/layout.js"></script>
+  <script src="/assets/js/deletion.js"></script>
   <script src="/assets/js/owners.js"></script>
 </body>
 </html>

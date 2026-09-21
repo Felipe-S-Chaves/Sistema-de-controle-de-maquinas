@@ -22,24 +22,37 @@
 
         <div class="card mb-3">
           <div class="card-body p-3">
-            <div class="row g-2 align-items-end">
-              <div class="col-12 col-md-3">
-                <label class="form-label" for="typeSelect">Tipo</label>
-                <select class="form-select" id="typeSelect">
-                  <option value="period">Por periodo (analitico)</option>
-                  <option value="owners">Por proprietario</option>
-                  <option value="machines">Por maquina</option>
-                </select>
+            <div class="row g-3 align-items-end">
+
+              <!-- Cliente: escolhido por clique, um de cada vez. -->
+              <div class="col-12 col-lg-6" data-filter-owner>
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                  <label class="form-label mb-0" id="ownerPickLabel">Cliente</label>
+                  <input type="search" class="form-control form-control-sm ms-auto" id="ownerSearch"
+                         placeholder="Buscar cliente" aria-label="Buscar cliente"
+                         style="max-width: 220px;">
+                </div>
+                <div class="pick-list" id="ownerPick" role="group" aria-labelledby="ownerPickLabel">
+                  <span class="pick-empty">Carregando...</span>
+                </div>
               </div>
-              <div class="col-12 col-md-3">
-                <label class="form-label" for="ownerFilter">Proprietario</label>
-                <select class="form-select" id="ownerFilter"><option value="">Todos</option></select>
+
+              <!-- Maquinas: varias por clique. Sem selecao = todas do recorte. -->
+              <div class="col-12 col-lg-6" data-filter-machines>
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                  <label class="form-label mb-0" id="machinePickLabel">Maquinas</label>
+                  <span class="badge text-bg-light" id="machineCount">Todas</span>
+                  <div class="btn-group btn-group-sm ms-auto">
+                    <button type="button" class="btn btn-outline-secondary" id="btnPickAll">Selecionar todas</button>
+                    <button type="button" class="btn btn-outline-secondary" id="btnPickNone">Limpar</button>
+                  </div>
+                </div>
+                <div class="pick-list" id="machinePick" role="group" aria-labelledby="machinePickLabel">
+                  <span class="pick-empty">Carregando...</span>
+                </div>
               </div>
-              <div class="col-12 col-md-3">
-                <label class="form-label" for="machineFilter">Maquina</label>
-                <select class="form-select" id="machineFilter"><option value="">Todas</option></select>
-              </div>
-              <div class="col-12 col-md-3">
+
+              <div class="col-12 col-md-4">
                 <label class="form-label" for="periodSelect">Periodo</label>
                 <select class="form-select" id="periodSelect">
                   <option value="month" selected>Este mes</option>
@@ -50,15 +63,15 @@
                   <option value="custom">Personalizado</option>
                 </select>
               </div>
-              <div class="col-6 col-md-3 d-none" data-custom-range>
+              <div class="col-6 col-md-4 d-none" data-custom-range>
                 <label class="form-label" for="startDate">Data inicial</label>
                 <input type="date" class="form-control" id="startDate">
               </div>
-              <div class="col-6 col-md-3 d-none" data-custom-range>
+              <div class="col-6 col-md-4 d-none" data-custom-range>
                 <label class="form-label" for="endDate">Data final</label>
                 <input type="date" class="form-control" id="endDate">
               </div>
-              <div class="col-12 col-md-6 d-flex gap-2">
+              <div class="col-12 col-md-8 d-flex gap-2">
                 <button class="btn btn-primary btn-touch flex-fill" id="btnGenerate">Gerar relatorio</button>
                 <button class="btn btn-outline-primary btn-touch flex-fill" id="btnPdf" disabled>
                   <span aria-hidden="true">&#128196;</span> PDF

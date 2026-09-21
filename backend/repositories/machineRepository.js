@@ -1,6 +1,7 @@
 'use strict';
 
 const db = require('../config/database');
+const { exigirConta } = require('../utils/tenant');
 
 const BASE_SELECT = `
   SELECT m.id, m.number, m.name, m.owner_id, m.model, m.manufacturer, m.serial_number,
@@ -9,9 +10,9 @@ const BASE_SELECT = `
     FROM machines m
     JOIN owners o ON o.id = m.owner_id`;
 
-async function list({ page = 1, pageSize = 20, search = null, status = null, ownerId = null, orderBy = 'number', orderDir = 'ASC' }) {
-  const where = [];
-  const params = [];
+async function list({ accountId, page = 1, pageSize = 20, search = null, status = null, ownerId = null, orderBy = 'number', orderDir = 'ASC' }) {
+  const where = ['m.account_id = ?'];
+  const params = [exigirConta(accountId)];
 
   if (search) {
     where.push('(m.number LIKE ? OR m.name LIKE ? OR o.name LIKE ? OR m.serial_number LIKE ?)');
@@ -21,7 +22,7 @@ async function list({ page = 1, pageSize = 20, search = null, status = null, own
   if (status) { where.push('m.status = ?'); params.push(status); }
   if (ownerId) { where.push('m.owner_id = ?'); params.push(Number(ownerId)); }
 
-  const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+  const whereSql = `WHERE ${where.join(' AND ')}`;
   const safeOrderBy = ['number', 'name', 'created_at', 'status'].includes(orderBy) ? orderBy : 'number';
   const safeOrderDir = String(orderDir).toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
   const offset = (page - 1) * pageSize;
@@ -42,18 +43,22 @@ async function list({ page = 1, pageSize = 20, search = null, status = null, own
   return { items, total: Number(totalRow.total) };
 }
 
-async function findById(id) {
-  return db.queryOne(`${BASE_SELECT} WHERE m.id = ? LIMIT 1`, [id]);
+async function findById(id, accountId) {
+  return db.queryOne(
+    `${BASE_SELECT} WHERE m.id = ? AND m.account_id = ? LIMIT 1`,
+    [id, exigirConta(accountId)]
+  );
 }
 
-async function findByNumber(number, excludeId = null) {
-  const params = [number];
-  let sql = 'SELECT id, name FROM machines WHERE number = ?';
+/** O numero ja existe NESTA conta? As duas contas podem ter uma "001". */
+async function findByNumber(number, accountId, excludeId = null) {
+  const params = [number, exigirConta(accountId)];
+  let sql = 'SELECT id, name FROM machines WHERE number = ? AND account_id = ?';
   if (excludeId) { sql += ' AND id <> ?'; params.push(excludeId); }
   return db.queryOne(`${sql} LIMIT 1`, params);
 }
 
-async function listByOwner(ownerId) {
+async function listByOwner(ownerId, accountId) {
   return db.query(
     `SELECT m.id, m.number, m.name, m.status, m.installation_date,
             (SELECT c.collected_at FROM collections c
@@ -63,43 +68,48 @@ async function listByOwner(ownerId) {
               WHERE c.machine_id = m.id AND c.status = 'confirmed'
               ORDER BY c.collected_at DESC, c.id DESC LIMIT 1) AS last_total_value
        FROM machines m
-      WHERE m.owner_id = ?
+      WHERE m.owner_id = ? AND m.account_id = ?
       ORDER BY m.number ASC`,
-    [ownerId]
+    [ownerId, exigirConta(accountId)]
   );
 }
 
 async function create(data) {
   const result = await db.query(
     `INSERT INTO machines
-       (number, name, owner_id, model, manufacturer, serial_number, installation_date, status, notes, created_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [data.number, data.name, data.owner_id, data.model, data.manufacturer, data.serial_number,
+       (account_id, number, name, owner_id, model, manufacturer, serial_number,
+        installation_date, status, notes, created_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [exigirConta(data.account_id), data.number, data.name, data.owner_id,
+      data.model || null, data.manufacturer || null, data.serial_number || null,
       data.installation_date, data.status, data.notes, data.created_by]
   );
   return result.insertId;
 }
 
-async function update(id, data) {
+async function update(id, data, accountId) {
   await db.query(
     `UPDATE machines SET
        number = ?, name = ?, owner_id = ?, model = ?, manufacturer = ?, serial_number = ?,
        installation_date = ?, status = ?, notes = ?
-     WHERE id = ?`,
-    [data.number, data.name, data.owner_id, data.model, data.manufacturer, data.serial_number,
-      data.installation_date, data.status, data.notes, id]
+     WHERE id = ? AND account_id = ?`,
+    [data.number, data.name, data.owner_id,
+      data.model || null, data.manufacturer || null, data.serial_number || null,
+      data.installation_date, data.status, data.notes, id, exigirConta(accountId)]
   );
 }
 
 /** Resumo da maquina: ultima coleta + totais do mes e do periodo. */
-async function summary(machineId, { from = null, to = null } = {}) {
+async function summary(machineId, { from = null, to = null, accountId } = {}) {
+  const conta = exigirConta(accountId);
+
   const last = await db.queryOne(
     `SELECT id, collected_at, previous_entry_value, current_entry_value, calculated_entry_value,
             previous_exit_value, current_exit_value, calculated_exit_value, calculated_total_value
        FROM collections
-      WHERE machine_id = ? AND status = 'confirmed'
+      WHERE machine_id = ? AND account_id = ? AND status = 'confirmed'
       ORDER BY collected_at DESC, id DESC LIMIT 1`,
-    [machineId]
+    [machineId, conta]
   );
 
   const monthTotals = await db.queryOne(
@@ -108,13 +118,13 @@ async function summary(machineId, { from = null, to = null } = {}) {
             COALESCE(SUM(calculated_exit_value), 0) AS total_exit,
             COALESCE(SUM(calculated_total_value), 0) AS total_value
        FROM collections
-      WHERE machine_id = ? AND status = 'confirmed'
+      WHERE machine_id = ? AND account_id = ? AND status = 'confirmed'
         AND YEAR(collected_at) = YEAR(CURDATE()) AND MONTH(collected_at) = MONTH(CURDATE())`,
-    [machineId]
+    [machineId, conta]
   );
 
-  const periodParams = [machineId];
-  let periodSql = "WHERE machine_id = ? AND status = 'confirmed'";
+  const periodParams = [machineId, conta];
+  let periodSql = "WHERE machine_id = ? AND account_id = ? AND status = 'confirmed'";
   if (from) { periodSql += ' AND collected_at >= ?'; periodParams.push(from); }
   if (to) { periodSql += ' AND collected_at <= ?'; periodParams.push(to); }
 
@@ -131,9 +141,9 @@ async function summary(machineId, { from = null, to = null } = {}) {
 }
 
 /** Busca leve por numero/nome (busca global e autocomplete). */
-async function searchLight(term, limit = 20, ownerId = null) {
+async function searchLight(term, accountId, limit = 20, ownerId = null) {
   const like = `%${term}%`;
-  const params = [like, like];
+  const params = [exigirConta(accountId), like, like];
   let ownerSql = '';
   if (ownerId) { ownerSql = 'AND m.owner_id = ?'; params.push(Number(ownerId)); }
   params.push(String(limit));
@@ -142,7 +152,7 @@ async function searchLight(term, limit = 20, ownerId = null) {
     `SELECT m.id, m.number, m.name, m.status, m.owner_id, o.name AS owner_name
        FROM machines m
        JOIN owners o ON o.id = m.owner_id
-      WHERE (m.number LIKE ? OR m.name LIKE ?) ${ownerSql}
+      WHERE m.account_id = ? AND (m.number LIKE ? OR m.name LIKE ?) ${ownerSql}
       ORDER BY m.number ASC LIMIT ?`,
     params
   );

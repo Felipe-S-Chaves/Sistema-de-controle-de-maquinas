@@ -121,7 +121,7 @@
           totalBlock('Coletas confirmadas', t.collections_count) +
           totalBlock('Entrada apurada', Utils.formatMoney(t.total_entry)) +
           totalBlock('Saida apurada', Utils.formatMoney(t.total_exit)) +
-          totalBlock('Total apurado', Utils.formatMoney(t.total_value), totalClass) +
+          totalBlock('Total bruto', Utils.formatMoney(t.total_value), totalClass) +
           '</div></div>';
       })
       .catch(function () { document.getElementById('totalsCard').innerHTML = ''; });
@@ -149,13 +149,13 @@
         '<tr' + (cancelled ? ' class="table-light"' : '') + '>' +
         '  <td data-label="Data">' + Utils.formatDateTime(c.collected_at) +
         (c.is_exception ? ' <span class="badge text-bg-warning">Excecao</span>' : '') + '</td>' +
-        '  <td data-label="Proprietario"><a href="/owner-detail.html?id=' + c.owner_id + '">' +
+        '  <td data-label="Cliente"><a href="/owner-detail.html?id=' + c.owner_id + '">' +
         Utils.escapeHtml(c.owner_name) + '</a></td>' +
         '  <td data-label="Maquina"><a href="/machine-detail.html?id=' + c.machine_id + '">' +
         Utils.escapeHtml(Utils.machineLabel(c)) + '</a></td>' +
         '  <td data-label="Entrada apurada" class="text-end">' + Utils.formatMoney(c.calculated_entry_value) + '</td>' +
         '  <td data-label="Saida apurada" class="text-end">' + Utils.formatMoney(c.calculated_exit_value) + '</td>' +
-        '  <td data-label="Apurado" class="text-end fw-semibold ' + totalClass + '">' +
+        '  <td data-label="Valor bruto" class="text-end fw-semibold ' + totalClass + '">' +
         Utils.formatMoney(c.calculated_total_value) + '</td>' +
         '  <td data-label="Fotos" class="text-end">' + c.images_count + '</td>' +
         '  <td data-label="Status">' + Utils.statusBadge(c.status) + '</td>' +
@@ -168,9 +168,9 @@
     container.innerHTML =
       '<div class="table-responsive-cards">' +
       '<table class="table table-hover align-middle mb-0">' +
-      '  <thead><tr><th>Data</th><th>Proprietario</th><th>Maquina</th>' +
+      '  <thead><tr><th>Data</th><th>Cliente</th><th>Maquina</th>' +
       '    <th class="text-end">Ent. apurada</th><th class="text-end">Said. apurada</th>' +
-      '    <th class="text-end">Apurado</th><th class="text-end">Fotos</th><th>Status</th><th></th></tr></thead>' +
+      '    <th class="text-end">Valor bruto</th><th class="text-end">Fotos</th><th>Status</th><th></th></tr></thead>' +
       '  <tbody>' + rows + '</tbody>' +
       '</table></div>';
   }

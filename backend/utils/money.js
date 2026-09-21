@@ -67,8 +67,23 @@ function formatBRL(value) {
   return `${negative ? '-' : ''}R$ ${integerPart},${decimalPart}`;
 }
 
+/**
+ * Metade de um valor, arredondada ao centavo.
+ *
+ * O resultado bruto e dividido em duas partes iguais. Quando o valor tem um
+ * numero impar de centavos, a metade exata nao cabe em centavos - R$ 26,97
+ * daria R$ 13,485 - entao arredondamos. Por isso o relatorio calcula a metade
+ * do TOTAL para o fechamento, e nao a soma das metades linha a linha: o que
+ * vale para o acerto e o total.
+ */
+function half(value) {
+  const cents = toCents(value);
+  if (cents === null) return null;
+  return fromCents(Math.round(cents / 2));
+}
+
 function isValidCents(cents) {
   return Number.isInteger(cents) && Math.abs(cents) <= MAX_CENTS;
 }
 
-module.exports = { toCents, fromCents, normalize, formatBRL, isValidCents, MAX_CENTS };
+module.exports = { toCents, fromCents, normalize, formatBRL, half, isValidCents, MAX_CENTS };

@@ -42,8 +42,14 @@
       (c.is_first_collection ? '<span class="badge text-bg-info badge-status">Primeira coleta</span>' : '') +
       '    </div>' +
       '  </div>' +
-      (cancelled ? '' :
-        '  <button class="btn btn-outline-danger btn-touch" id="btnCancelCollection">Cancelar coleta</button>') +
+      '  <div class="d-flex gap-2 flex-wrap">' +
+      (Api.can('collections.receipt')
+        ? '    <button class="btn btn-primary btn-touch" id="btnReceipt">' +
+          '<span aria-hidden="true">&#128196;</span> Comprovante em PDF</button>'
+        : '') +
+      (cancelled || !Api.can('collections.cancel') ? '' :
+        '    <button class="btn btn-outline-danger btn-touch" id="btnCancelCollection">Cancelar coleta</button>') +
+      '  </div>' +
       '</div>' +
 
       (cancelled
@@ -60,7 +66,7 @@
       '  <div class="col-12 col-lg-6">' +
       '    <div class="card h-100"><div class="card-header">Informacoes</div><div class="card-body">' +
       '      <dl class="row mb-0 small">' +
-      infoRow('Proprietario', '<a href="/owner-detail.html?id=' + c.owner_id + '">' +
+      infoRow('Cliente', '<a href="/owner-detail.html?id=' + c.owner_id + '">' +
         Utils.escapeHtml(c.owner_name) + '</a>') +
       infoRow('Maquina', '<a href="/machine-detail.html?id=' + c.machine_id + '">' +
         Utils.escapeHtml(machineLabel) + '</a>') +
@@ -97,7 +103,7 @@
       '        </div></div>' +
       '      </div>' +
       '      <div class="result-box">' +
-      '        <div class="result-line">Valor apurado</div>' +
+      '        <div class="result-line">Valor bruto</div>' +
       '        <div class="result-value">' + Utils.formatMoney(c.calculated_total_value) + '</div>' +
       '        <div class="result-line mt-2">' +
       Utils.formatMoney(c.calculated_entry_value) + ' &minus; ' + Utils.formatMoney(c.calculated_exit_value) +
@@ -132,8 +138,20 @@
       '</div>';
 
     if (currentImages.length) loadThumbnails();
-    if (!cancelled) {
-      document.getElementById('btnCancelCollection').addEventListener('click', onCancel);
+    var btnCancelar = document.getElementById('btnCancelCollection');
+    if (btnCancelar) btnCancelar.addEventListener('click', onCancel);
+
+    var btnComprovante = document.getElementById('btnReceipt');
+    if (btnComprovante) {
+      btnComprovante.addEventListener('click', function () {
+        Utils.setButtonLoading(btnComprovante, true, 'Gerando...');
+        Api.downloadReceipt(collectionId)
+          .then(function () { Utils.notify.success('Comprovante gerado.'); })
+          .catch(function (error) {
+            Utils.notify.error(error.message || 'Nao foi possivel gerar o comprovante.');
+          })
+          .finally(function () { Utils.setButtonLoading(btnComprovante, false); });
+      });
     }
   }
 

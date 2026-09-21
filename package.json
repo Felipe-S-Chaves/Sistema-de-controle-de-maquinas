@@ -9,7 +9,7 @@
     "migrate": "node backend/database/migrate.js",
     "seed": "node backend/database/seed.js",
     "reset": "node backend/database/migrate.js --fresh && node backend/database/seed.js",
-    "test": "node --test --test-concurrency=1 tests/calculator.test.js tests/validation.test.js tests/api.test.js tests/browser.test.js",
+    "test": "node --test --test-concurrency=1 tests/calculator.test.js tests/validation.test.js tests/api.test.js tests/permissions.test.js tests/accounts.test.js tests/browser.test.js",
     "vendor": "node scripts/copy-vendor.js",
     "postinstall": "node scripts/copy-vendor.js",
     "test:unit": "node --test tests/calculator.test.js tests/validation.test.js",
@@ -17,7 +17,11 @@
     "test:browser": "node --test tests/browser.test.js",
     "setup": "node backend/database/install.js",
     "db:check": "node backend/database/check.js",
-    "db:setup": "node backend/database/setup.js"
+    "db:setup": "node backend/database/setup.js",
+    "test:permissions": "node --test tests/permissions.test.js",
+    "recalc": "node backend/database/recalculate.js",
+    "converter-leituras": "node backend/database/rescale-readings.js",
+    "test:accounts": "node --test tests/accounts.test.js"
   },
   "engines": {
     "node": ">=18"

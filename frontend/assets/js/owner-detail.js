@@ -1,4 +1,4 @@
-/** Pagina do proprietario: dados, resumo e maquinas. */
+/** Pagina do cliente: dados, resumo e maquinas. */
 (function () {
   'use strict';
 
@@ -8,7 +8,7 @@
     if (!Api.isAuthenticated()) return;
     ownerId = Utils.queryParam('id');
     if (!ownerId) {
-      Utils.renderError(document.getElementById('ownerContent'), 'Proprietario nao informado.');
+      Utils.renderError(document.getElementById('ownerContent'), 'Cliente nao informado.');
       return;
     }
     load();
@@ -39,7 +39,7 @@
           '  <td data-label="Status">' + Utils.statusBadge(m.status) + '</td>' +
           '  <td data-label="Ultima coleta">' +
           (m.last_collection_at ? Utils.formatDateTime(m.last_collection_at) : 'Sem coletas') + '</td>' +
-          '  <td data-label="Ultimo apurado" class="text-end">' +
+          '  <td data-label="Ultimo valor bruto" class="text-end">' +
           (m.last_total_value !== null ? Utils.formatMoney(m.last_total_value) : '-') + '</td>' +
           '  <td data-label="" class="cell-actions text-end">' +
           '    <a class="btn btn-sm btn-outline-primary" href="/collection-new.html?machine_id=' + m.id + '">Coletar</a>' +
@@ -99,29 +99,118 @@
       '        </dl>' +
       '        <hr>' +
       '        <div class="d-flex justify-content-between align-items-baseline gap-2">' +
-      '          <span class="fw-semibold">Total apurado no mes</span>' +
+      '          <span class="fw-semibold">Total bruto no mes</span>' +
       '          <span class="fs-5 fw-bold ' + totalClass + '">' + Utils.formatMoney(s.total_value) + '</span>' +
       '        </div>' +
       '      </div></div>' +
       '  </div>' +
       '</div>' +
 
+      // Documento do cliente: e a comprovacao de quem foi cadastrado, entao
+      // fica na ficha, nao escondido dentro do formulario de edicao.
+      '<div class="card mb-3">' +
+      '  <div class="card-header">Documento do cliente</div>' +
+      '  <div class="card-body">' +
+      (owner.document_photo_path
+        ? '<div class="d-flex flex-wrap align-items-start gap-3">' +
+          '  <button type="button" class="p-0 border-0 bg-transparent" id="btnOpenDocument"' +
+          '          aria-label="Ver o documento em tamanho maior">' +
+          '    <img id="documentPhoto" alt="Documento de ' + Utils.escapeHtml(owner.name) + '"' +
+          '         class="rounded border" style="width:180px;height:180px;object-fit:cover;cursor:zoom-in">' +
+          '  </button>' +
+          '  <div class="small">' +
+          '    <dl class="row mb-2">' +
+          infoRow('Arquivo', Utils.escapeHtml(owner.document_photo_name || 'documento')) +
+          infoRow('Tamanho', owner.document_photo_size
+            ? Utils.tamanhoLegivel(owner.document_photo_size) : '-') +
+          infoRow('Anexado em', owner.document_photo_at
+            ? Utils.formatDateTime(owner.document_photo_at) : '-') +
+          '    </dl>' +
+          '    <button type="button" class="btn btn-sm btn-outline-primary" id="btnDownloadDocument">' +
+          'Baixar</button>' +
+          '  </div>' +
+          '</div>'
+        : '<div class="state-block"><div class="state-icon">&#128196;</div>' +
+          '<p class="mb-1">Este cliente nao tem foto de documento.</p>' +
+          '<p class="text-muted small mb-0">Ele foi cadastrado antes da foto passar a ser exigida. ' +
+          'Use <em>Editar</em> na lista de clientes para anexar.</p></div>') +
+      '  </div>' +
+      '</div>' +
+
       '<div class="card">' +
       '  <div class="card-header d-flex justify-content-between align-items-center">' +
-      '    <span>Maquinas deste proprietario</span>' +
+      '    <span>Maquinas deste cliente</span>' +
       '    <span class="badge text-bg-secondary">' + owner.machines.length + '</span>' +
       '  </div>' +
       '  <div class="card-body p-2 p-md-3">' +
       (machinesRows
         ? '<div class="table-responsive-cards"><table class="table table-hover align-middle mb-0">' +
           '<thead><tr><th>Maquina</th><th>Status</th><th>Ultima coleta</th>' +
-          '<th class="text-end">Ultimo apurado</th><th></th></tr></thead>' +
+          '<th class="text-end">Ultimo valor bruto</th><th></th></tr></thead>' +
           '<tbody>' + machinesRows + '</tbody></table></div>'
         : '<div class="state-block"><div class="state-icon">&#127925;</div>' +
-          '<p class="mb-2">Este proprietario ainda nao possui maquinas.</p>' +
+          '<p class="mb-2">Este cliente ainda nao possui maquinas.</p>' +
           '<a class="btn btn-sm btn-primary" href="/machines.html?owner_id=' + owner.id + '">Cadastrar maquina</a></div>') +
       '  </div>' +
       '</div>';
+
+    if (owner.document_photo_path) bindDocumento(owner);
+  }
+
+  /**
+   * Foto do documento.
+   *
+   * A imagem e protegida: o token vai no cabecalho, nunca na URL. Por isso ela
+   * e baixada como blob e so entao vira o src do <img>.
+   *
+   * O endereco do blob fica vivo enquanto a ficha estiver aberta, porque a
+   * miniatura e o modal usam o mesmo. Descartar logo depois de carregar a
+   * miniatura faria a imagem do modal abrir quebrada.
+   */
+  var urlDocumento = null;
+
+  function bindDocumento(owner) {
+    var caminho = '/owners/' + owner.id + '/document-photo';
+    var img = document.getElementById('documentPhoto');
+
+    Api.get(caminho)
+      .then(function (blob) {
+        urlDocumento = URL.createObjectURL(blob);
+        img.src = urlDocumento;
+      })
+      .catch(function () {
+        img.replaceWith(Object.assign(document.createElement('p'), {
+          className: 'text-muted small mb-0',
+          textContent: 'Nao foi possivel carregar a foto do documento.'
+        }));
+      });
+
+    document.getElementById('btnOpenDocument').addEventListener('click', function () {
+      if (!urlDocumento) return;
+      abrirEmTamanhoReal(owner);
+    });
+
+    document.getElementById('btnDownloadDocument').addEventListener('click', function () {
+      var nome = owner.document_photo_name || ('documento-' + owner.id + '.jpg');
+      Api.download(caminho, null, nome)
+        .catch(function (erro) { Utils.notify.error(erro.message || 'Nao foi possivel baixar.'); });
+    });
+
+    window.addEventListener('beforeunload', function () {
+      if (urlDocumento) URL.revokeObjectURL(urlDocumento);
+    });
+  }
+
+  /** Abre a foto em um modal, para conferir os dados do documento. */
+  function abrirEmTamanhoReal(owner) {
+    var el = document.getElementById('documentModal');
+    el.querySelector('[data-document-title]').textContent = 'Documento de ' + owner.name;
+
+    var alvo = el.querySelector('[data-document-image]');
+    alvo.src = urlDocumento;
+    alvo.alt = 'Documento de ' + owner.name;
+
+    bootstrap.Modal.getOrCreateInstance(el).show();
   }
 
   function infoRow(label, value) {

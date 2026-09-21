@@ -5,14 +5,19 @@
 window.Layout = (function () {
   'use strict';
 
+  /**
+   * Cada item declara a permissao necessaria. Quem nao tem, nem ve o item.
+   * Isso e apenas conveniencia visual: quem realmente barra e o backend.
+   */
   var MENU = [
-    { href: '/index.html', label: 'Dashboard', icon: '&#128202;' },
-    { href: '/owners.html', label: 'Proprietarios', icon: '&#128100;' },
+    { href: '/collection-new.html', label: 'Nova coleta', icon: '&#10133;', permissao: 'collections.create' },
+    { href: '/index.html', label: 'Dashboard', icon: '&#128202;', permissao: 'dashboard.full' },
+    { href: '/owners.html', label: 'Clientes', icon: '&#128100;' },
     { href: '/machines.html', label: 'Maquinas', icon: '&#127925;' },
     { href: '/collections.html', label: 'Coletas', icon: '&#128203;' },
-    { href: '/collection-new.html', label: 'Nova coleta', icon: '&#10133;' },
-    { href: '/reports.html', label: 'Relatorios', icon: '&#128200;' },
-    { href: '/audit.html', label: 'Auditoria', icon: '&#128269;', adminOnly: true }
+    { href: '/reports.html', label: 'Relatorios', icon: '&#128200;', permissao: 'reports.own' },
+    { href: '/users.html', label: 'Usuarios', icon: '&#128101;', permissao: 'users.manage' },
+    { href: '/audit.html', label: 'Auditoria', icon: '&#128269;', permissao: 'audit.view' }
   ];
 
   /** Redireciona para o login quando nao ha sessao valida. */
@@ -36,7 +41,7 @@ window.Layout = (function () {
     var path = currentPath();
 
     var menuHtml = MENU.filter(function (item) {
-      return !item.adminOnly || user.role === 'admin';
+      return !item.permissao || Api.can(item.permissao);
     }).map(function (item) {
       var active = path === item.href ? ' active' : '';
       return '<a class="nav-link' + active + '" href="' + item.href + '">' +
@@ -48,12 +53,14 @@ window.Layout = (function () {
       topbar.innerHTML =
         '<div class="container-fluid d-flex align-items-center gap-2 h-100 px-2 px-md-3">' +
         '<button class="btn btn-icon d-lg-none px-2" id="btnToggleSidebar" aria-label="Abrir menu">&#9776;</button>' +
-        '<a class="navbar-brand me-auto text-truncate" href="/index.html">Controle de Maquinas</a>' +
-        '<div class="global-search d-none d-md-block">' +
-        '  <input type="search" class="form-control form-control-sm" id="globalSearchInput"' +
-        '         placeholder="Buscar proprietario ou maquina..." autocomplete="off" aria-label="Busca global">' +
-        '  <div class="global-search-results d-none" id="globalSearchResults"></div>' +
-        '</div>' +
+        '<a class="navbar-brand me-auto text-truncate" href="' + Api.homePage() + '">Controle de Maquinas</a>' +
+        (Api.can('owners.view')
+          ? '<div class="global-search d-none d-md-block">' +
+            '  <input type="search" class="form-control form-control-sm" id="globalSearchInput"' +
+            '         placeholder="Buscar cliente ou maquina..." autocomplete="off" aria-label="Busca global">' +
+            '  <div class="global-search-results d-none" id="globalSearchResults"></div>' +
+            '</div>'
+          : '<span class="me-auto"></span>') +
         '<div class="dropdown">' +
         '  <button class="btn btn-icon dropdown-toggle px-2" data-bs-toggle="dropdown" aria-expanded="false">' +
         '    <span class="d-none d-sm-inline">' + Utils.escapeHtml(user.name) + '</span>' +
@@ -61,6 +68,12 @@ window.Layout = (function () {
         '  </button>' +
         '  <ul class="dropdown-menu dropdown-menu-end">' +
         '    <li><span class="dropdown-item-text small text-muted">' + Utils.escapeHtml(user.email || '') + '</span></li>' +
+        '    <li><span class="dropdown-item-text small"><span class="badge text-bg-secondary">' +
+        Utils.escapeHtml(user.role_label || user.role || '') + '</span>' +
+        (user.account_name
+          ? ' <span class="badge text-bg-light border">' + Utils.escapeHtml(user.account_name) + '</span>'
+          : '') +
+        '</span></li>' +
         '    <li><hr class="dropdown-divider"></li>' +
         '    <li><button class="dropdown-item" id="btnChangePassword">Alterar senha</button></li>' +
         '    <li><button class="dropdown-item text-danger" id="btnLogout">Sair</button></li>' +
@@ -155,7 +168,7 @@ window.Layout = (function () {
 
           data.owners.forEach(function (o) {
             items.push('<a class="list-group-item list-group-item-action" href="/owner-detail.html?id=' + o.id + '">' +
-              '<span class="badge text-bg-primary me-2">Proprietario</span>' +
+              '<span class="badge text-bg-primary me-2">Cliente</span>' +
               Utils.escapeHtml(o.name) + '</a>');
           });
           data.machines.forEach(function (m) {
